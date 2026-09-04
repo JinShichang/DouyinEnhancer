@@ -294,7 +294,8 @@ object CleanModeHooker : YukiBaseHooker() {
                 val code = playerEvent.getField<Int>(
                     packageInstance.videoPlayerEvent.code()
                 ) ?: return@after
-                if (code == PLAYER_EVENT_PAUSED || code == PLAYER_EVENT_COMPLETED) {
+                if (code == PLAYER_EVENT_PAUSED) {
+                    // 仅在真正暂停时恢复；播完自动重播不恢复，避免重播瞬间元素闪现
                     applyOverlayMode(hidden = false)
                 }
             }
@@ -433,36 +434,36 @@ object CleanModeHooker : YukiBaseHooker() {
         }
     }
 
-    /** 打印 decor 顶层视图结构与尺寸，用于定位“挡在视频底部”的视图 */
+    /** 打印 decor 视图树（深 7 层，限量），用于定位“挡在视频底部”的视图 */
     private fun dumpDecorChildren() {
         val activity = mainActivityRef?.get() ?: return
         val decor = activity.window?.decorView ?: return
-        if (decor !is ViewGroup) {
-            return
-        }
         YLog.debug("$TAG: decor children dump (screen=${activity.resources.displayMetrics.heightPixels})")
-        for (i in 0 until decor.childCount) {
-            val child = decor.getChildAt(i)
-            val lp = child.layoutParams
+        val counter = intArrayOf(0)
+        fun dumpView(view: View, prefix: String, depth: Int) {
+            if (depth > 7 || counter[0] > 400) {
+                return
+            }
+            counter[0]++
+            val lp = view.layoutParams
             val lpText = if (lp is ViewGroup.MarginLayoutParams) {
                 "h=${lp.height} bottomMargin=${lp.bottomMargin}"
             } else {
                 "lp=${lp?.javaClass?.simpleName}"
             }
+            val idText = if (view.id != View.NO_ID) "id=0x${view.id.toString(16)}" else "id=no"
             YLog.debug(
-                "$TAG:   [$i] ${child.javaClass.name} vis=${child.visibility} " +
-                    "top=${child.top} bottom=${child.bottom} $lpText"
+                "$TAG: $prefix ${view.javaClass.name} vis=${view.visibility} " +
+                    "top=${view.top} bottom=${view.bottom} $idText $lpText"
             )
-            if (child is ViewGroup) {
-                for (j in 0 until child.childCount) {
-                    val g = child.getChildAt(j)
-                    YLog.debug(
-                        "$TAG:      [$i.$j] ${g.javaClass.name} vis=${g.visibility} " +
-                            "top=${g.top} bottom=${g.bottom}"
-                    )
+            if (view is ViewGroup) {
+                val count = view.childCount
+                for (i in 0 until count) {
+                    dumpView(view.getChildAt(i), "$prefix$i.", depth + 1)
                 }
             }
         }
+        dumpView(decor, "  ", 0)
     }
 
     private fun collectOverlayViews(view: View, classLoader: ClassLoader, out: MutableList<View>) {
