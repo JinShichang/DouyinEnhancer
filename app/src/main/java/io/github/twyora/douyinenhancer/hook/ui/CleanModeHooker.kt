@@ -122,6 +122,16 @@ object CleanModeHooker : YukiBaseHooker() {
         }
     }
 
+    /** 播放（隐藏）期间每 1s 持续压制，抖音一旦重新显示控件就再次隐藏 */
+    private val suppressRunnable = object : Runnable {
+        override fun run() {
+            if (overlaysHidden) {
+                applyOverlayVisibility(hidden = true, log = false, zeroSpaces = false)
+                mainHandler.postDelayed(this, 1000L)
+            }
+        }
+    }
+
     private var mainActivityRef: WeakReference<Activity>? = null
     private var panelRef: WeakReference<Any>? = null
     private var immersiveDecorRef: WeakReference<View>? = null
@@ -336,9 +346,14 @@ object CleanModeHooker : YukiBaseHooker() {
         // 只在进入隐藏的瞬间清零留白（避免抖音重置后我们反复清零造成抖动）
         applyOverlayVisibility(hidden, log = true, zeroSpaces = hidden)
         mainHandler.removeCallbacks(rehideRunnable)
+        mainHandler.removeCallbacks(suppressRunnable)
         if (hidden) {
             mainHandler.postDelayed(rehideRunnable, 800L)
             mainHandler.postDelayed(rehideRunnable, 2500L)
+            mainHandler.postDelayed(suppressRunnable, 1000L)
+            if (verbose) {
+                dumpDecorChildren()
+            }
         }
     }
 
@@ -413,6 +428,38 @@ object CleanModeHooker : YukiBaseHooker() {
                 }
                 if (verbose) {
                     YLog.debug("$TAG: panel space $fieldName height set to 0")
+                }
+            }
+        }
+    }
+
+    /** 打印 decor 顶层视图结构与尺寸，用于定位“挡在视频底部”的视图 */
+    private fun dumpDecorChildren() {
+        val activity = mainActivityRef?.get() ?: return
+        val decor = activity.window?.decorView ?: return
+        if (decor !is ViewGroup) {
+            return
+        }
+        YLog.debug("$TAG: decor children dump (screen=${activity.resources.displayMetrics.heightPixels})")
+        for (i in 0 until decor.childCount) {
+            val child = decor.getChildAt(i)
+            val lp = child.layoutParams
+            val lpText = if (lp is ViewGroup.MarginLayoutParams) {
+                "h=${lp.height} bottomMargin=${lp.bottomMargin}"
+            } else {
+                "lp=${lp?.javaClass?.simpleName}"
+            }
+            YLog.debug(
+                "$TAG:   [$i] ${child.javaClass.name} vis=${child.visibility} " +
+                    "top=${child.top} bottom=${child.bottom} $lpText"
+            )
+            if (child is ViewGroup) {
+                for (j in 0 until child.childCount) {
+                    val g = child.getChildAt(j)
+                    YLog.debug(
+                        "$TAG:      [$i.$j] ${g.javaClass.name} vis=${g.visibility} " +
+                            "top=${g.top} bottom=${g.bottom}"
+                    )
                 }
             }
         }
