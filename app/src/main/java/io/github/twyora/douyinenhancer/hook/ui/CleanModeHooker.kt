@@ -113,9 +113,8 @@ object CleanModeHooker : YukiBaseHooker() {
     private val rehideRunnable = object : Runnable {
         override fun run() {
             if (overlaysHidden) {
-                applyOverlayVisibility(hidden = true, log = false)
-                // 清爽隐藏期间持续补扫，抓晚出现的作者/文案/右侧列/弹幕/合集/相关搜索等
-                mainHandler.postDelayed(this, 1500L)
+                // 补扫只处理悬浮控件，不再清零留白，避免与抖音的布局逻辑打架
+                applyOverlayVisibility(hidden = true, log = false, zeroSpaces = false)
             }
         }
     }
@@ -311,14 +310,16 @@ object CleanModeHooker : YukiBaseHooker() {
             return
         }
         overlaysHidden = hidden
-        applyOverlayVisibility(hidden, log = true)
+        // 只在进入隐藏的瞬间清零留白（避免抖音重置后我们反复清零造成抖动）
+        applyOverlayVisibility(hidden, log = true, zeroSpaces = hidden)
         mainHandler.removeCallbacks(rehideRunnable)
         if (hidden) {
-            mainHandler.postDelayed(rehideRunnable, 600L)
+            mainHandler.postDelayed(rehideRunnable, 800L)
+            mainHandler.postDelayed(rehideRunnable, 2500L)
         }
     }
 
-    private fun applyOverlayVisibility(hidden: Boolean, log: Boolean) {
+    private fun applyOverlayVisibility(hidden: Boolean, log: Boolean, zeroSpaces: Boolean) {
         val activity = mainActivityRef?.get()
         if (activity == null) {
             if (log) {
@@ -333,7 +334,9 @@ object CleanModeHooker : YukiBaseHooker() {
             return
         }
 
-        zeroPanelSpaces()
+        if (zeroSpaces) {
+            zeroPanelSpaces()
+        }
 
         val overlayViews = ArrayList<View>()
         collectOverlayViews(decorView, classLoader, overlayViews)
