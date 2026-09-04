@@ -141,7 +141,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.1 stable (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.2 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -339,6 +339,9 @@ object CleanModeHooker : YukiBaseHooker() {
         if (hidden) {
             mainHandler.postDelayed(rehideRunnable, 800L)
             mainHandler.postDelayed(rehideRunnable, 2500L)
+            if (verbose) {
+                dumpBottomRegionViews()
+            }
         }
     }
 
@@ -549,6 +552,40 @@ object CleanModeHooker : YukiBaseHooker() {
                 out.add(view)
             }
         }
+    }
+
+    /** 打印窗口最底部 region 内所有可见视图（类/id/边界/高度），用于定位挡住视频底部的容器 */
+    private fun dumpBottomRegionViews() {
+        val activity = mainActivityRef?.get() ?: return
+        val decor = activity.window?.decorView ?: return
+        val screenH = decor.bottom - decor.top
+        YLog.debug("$TAG: bottom-region views (screenH=$screenH)")
+        val counter = intArrayOf(0)
+        fun walk(view: View, prefix: String, depth: Int) {
+            if (depth > 12 || counter[0] > 400) {
+                return
+            }
+            counter[0]++
+            val h = view.bottom - view.top
+            if (view.visibility == View.VISIBLE && view.bottom >= screenH - 320 && h in 1..1800) {
+                val idText = if (view.id != View.NO_ID) "id=0x${view.id.toString(16)}" else "id=no"
+                val lp = view.layoutParams
+                val lpText = if (lp is ViewGroup.MarginLayoutParams) {
+                    "h=${lp.height} bottomMargin=${lp.bottomMargin}"
+                } else {
+                    "lp=${lp?.javaClass?.simpleName}"
+                }
+                YLog.debug(
+                    "$TAG:   $prefix ${view.javaClass.name} top=${view.top} bottom=${view.bottom} $idText $lpText"
+                )
+            }
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    walk(view.getChildAt(i), "$prefix$i.", depth + 1)
+                }
+            }
+        }
+        walk(decor, "", 0)
     }
 
     private fun collectByClassName(view: View, classLoader: ClassLoader, className: String, out: MutableList<View>) {
