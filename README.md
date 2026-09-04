@@ -32,6 +32,7 @@ A small Xposed module that adds quality-of-life features to Douyin
 - Open comment panel by double-tap in feed
 - Keep danmaku visible when entering clean mode (After enabling this, some scenarios in clear‑screen
   mode may unexpectedly make unrelated components visible)
+- Clean mode: hide playback overlays (avatar, like, comment, share, etc.) while watching; keep only the video and the progress bar
 - Automatically pause video on playback completion
 - Block auto video resumption on foreground return
 - Block specific playback‑page components

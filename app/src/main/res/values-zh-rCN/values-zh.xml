@@ -193,4 +193,7 @@
     <string name="pref_about_activation_status_deactivated_summary">抖柚未激活</string>
     <string name="pref_about_activation_status_activated_title">已启用</string>
     <string name="pref_about_activation_status_activated_summary">抖柚已激活</string>
+    <string name="pref_category_clean_mode">清爽模式</string>
+    <string name="pref_clean_mode_main_title">清爽模式</string>
+    <string name="pref_clean_mode_main_summary">观看视频时隐藏头像、点赞、评论、分享等悬浮控件，仅保留视频画面与底部进度条</string>
 </resources>
