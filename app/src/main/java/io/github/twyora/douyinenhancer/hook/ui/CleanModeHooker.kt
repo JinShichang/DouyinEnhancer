@@ -22,13 +22,12 @@ import java.lang.ref.WeakReference
 /**
  * 清爽模式（防烧屏模式 / OLED 救星）。
  *
- * 参考 dyoo 的思路：不删除组件，而是按“播放/暂停”状态整体隐藏/恢复悬浮控件容器。
- * - 播放/恢复/切到下一条自动播放 -> 隐藏顶栏、底栏、右侧互动栏、左下作者/文案/音乐等，仅保留视频与进度条；
- * - 暂停/播放结束 -> 全部恢复显示；
- * - 抖音冷启动首条视频的“控件后出现/单击不暂停”是抖音原生行为，与是否开启本功能无关。
+ * 参考 dyoo：
+ * - 播放/恢复/切页自动播放 -> 整体隐藏悬浮控件，同时进入沉浸（隐藏状态栏/导航栏），
+ *   并把 feed 面板的顶/底 spacer 收起，让视频真正铺满全屏；
+ * - 暂停/播放结束 -> 全部恢复（控件、状态栏、spacer）。
  *
- * 触发源直接挂钩 BaseListFragmentPanel 上所有播放/暂停方法调用（方法名在 38.8.0 未混淆），
- * 并保留原有视频事件兜底；进入隐藏后还会延迟重扫，避免“顶栏/底栏后出现”漏隐藏。
+ * 抖音冷启动首条视频的部分行为（元素后出现等）为原生现象；本模块只对自身隐藏逻辑负责。
  */
 @HookOnMainProcess
 object CleanModeHooker : YukiBaseHooker() {
@@ -40,7 +39,7 @@ object CleanModeHooker : YukiBaseHooker() {
     private val verbose
         get() = !FastKVConfigManager.module.getBoolean(ModuleKey.DISABLE_VERBOSE_LOGS, false)
 
-    // handleVideoEvent 的 videoType（内容流播放事件，作为兜底）
+    // handleVideoEvent 的 videoType（内容流播放事件，兜底）
     private const val VIDEO_EVENT_TEXTURE_AVAILABLE = 0
     private const val VIDEO_EVENT_PAUSE_CLICK = 16
     private const val VIDEO_EVENT_PAUSE_1 = 45
@@ -48,12 +47,15 @@ object CleanModeHooker : YukiBaseHooker() {
     private const val VIDEO_EVENT_RESUME_1 = 46
     private const val VIDEO_EVENT_RESUME_2 = 48
 
-    // onVideoPlayerEvent 的 code（播放器状态事件，作为兜底）
+    // onVideoPlayerEvent 的 code（播放器状态事件，兜底）
     private const val PLAYER_EVENT_PAUSED = 4
     private const val PLAYER_EVENT_COMPLETED = 7
 
     private val hidePlayVideoTypes = setOf(VIDEO_EVENT_TEXTURE_AVAILABLE, VIDEO_EVENT_RESUME_1, VIDEO_EVENT_RESUME_2)
     private val showPlayVideoTypes = setOf(VIDEO_EVENT_PAUSE_CLICK, VIDEO_EVENT_PAUSE_1, VIDEO_EVENT_PAUSE_2)
+
+    // dyoo 使用的沉浸标志位：IMMERSIVE_STICKY | LAYOUT_HIDE_NAVIGATION | FULLSCREEN | HIDE_NAVIGATION
+    private const val IMMERSIVE_FLAGS = 4614
 
     private const val HOST_PANEL_CLASS = "com.ss.android.ugc.aweme.feed.panel.BaseListFragmentPanel"
     private const val HOST_AWEME_CLASS = "com.ss.android.ugc.aweme.feed.model.Aweme"
@@ -80,6 +82,12 @@ object CleanModeHooker : YukiBaseHooker() {
         Method("pauseCurrentPlayerWithListener", emptyList())
     )
 
+    /** 页面切换类方法：切到新页后进入隐藏（新视频会自动播放） */
+    private val pageSelectedMethods = listOf(
+        Method("onPageSelected", emptyList()),
+        Method("onPageScrollStateChanged", listOf("int"))
+    )
+
     /** 需要整体隐藏的悬浮控件容器（类名在抖音 38.8.0 未混淆） */
     private val hideClassNames = listOf(
         "com.ss.android.ugc.aweme.homepage.ui.titlebar.MainTitleBar",
@@ -101,6 +109,7 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     private var mainActivityRef: WeakReference<Activity>? = null
+    private var panelRef: WeakReference<Any>? = null
 
     @Volatile
     private var cleanHidden = false
@@ -123,6 +132,10 @@ object CleanModeHooker : YukiBaseHooker() {
             after {
                 val activity = instance as? Activity ?: return@after
                 mainActivityRef = WeakReference(activity)
+                if (cleanHidden) {
+                    // 清爽隐藏期间回到前台时保持沉浸
+                    applyOverlayVisibility(hidden = true, log = false)
+                }
                 if (verbose) {
                     YLog.debug("$TAG: captured main activity ${activity::class.java.name}")
                 }
@@ -148,6 +161,7 @@ object CleanModeHooker : YukiBaseHooker() {
         playMethods.forEach { method ->
             panelClass.resolveMethod(method)?.hook {
                 after {
+                    capturePanel(instance)
                     applyCleanMode(hidden = true)
                 }
             }?.result {
@@ -163,7 +177,27 @@ object CleanModeHooker : YukiBaseHooker() {
         pauseMethods.forEach { method ->
             panelClass.resolveMethod(method)?.hook {
                 after {
+                    capturePanel(instance)
                     applyCleanMode(hidden = false)
+                }
+            }?.result {
+                onConductFailure { _, throwable ->
+                    YLog.error("$TAG: failed to hook ${method.name} for clean mode", throwable)
+                }
+                onHookingFailure { throwable ->
+                    YLog.error("$TAG: failed to hook ${method.name} for clean mode", throwable)
+                }
+            }
+        }
+
+        pageSelectedMethods.forEach { method ->
+            panelClass.resolveMethod(method)?.hook {
+                after {
+                    capturePanel(instance)
+                    val isScrolling = method.name == "onPageScrollStateChanged" && (args[0] as? Int) != 0
+                    if (!isScrolling) {
+                        applyCleanMode(hidden = true)
+                    }
                 }
             }?.result {
                 onConductFailure { _, throwable ->
@@ -180,6 +214,7 @@ object CleanModeHooker : YukiBaseHooker() {
             packageInstance.baseListFragmentPanel.handleVideoEvent()
         )?.hook {
             after {
+                capturePanel(instance)
                 val videoEvent = args[0] ?: return@after
                 val videoType = videoEvent.getField<Int>(
                     packageInstance.videoEvent.videoType()
@@ -203,6 +238,7 @@ object CleanModeHooker : YukiBaseHooker() {
             packageInstance.baseListFragmentPanel.onVideoPlayerEvent()
         )?.hook {
             after {
+                capturePanel(instance)
                 val playerEvent = args[0] ?: return@after
                 val code = playerEvent.getField<Int>(
                     packageInstance.videoPlayerEvent.code()
@@ -218,6 +254,12 @@ object CleanModeHooker : YukiBaseHooker() {
             onHookingFailure { throwable ->
                 YLog.error("$TAG: failed to hook player state events", throwable)
             }
+        }
+    }
+
+    private fun capturePanel(instance: Any?) {
+        if (instance != null) {
+            panelRef = WeakReference(instance)
         }
     }
 
@@ -249,6 +291,9 @@ object CleanModeHooker : YukiBaseHooker() {
             return
         }
 
+        applySystemBars(decorView, hidden)
+        applyPanelSpaces(hidden)
+
         val overlayViews = ArrayList<View>()
         collectOverlayViews(decorView, classLoader, overlayViews)
         val targetVisibility = if (hidden) View.GONE else View.VISIBLE
@@ -261,6 +306,41 @@ object CleanModeHooker : YukiBaseHooker() {
         }
         if (log || changed > 0) {
             YLog.debug("$TAG: clean mode ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
+        }
+    }
+
+    private fun applySystemBars(decorView: View, hidden: Boolean) {
+        val current = decorView.systemUiVisibility
+        val next = if (hidden) {
+            current or IMMERSIVE_FLAGS
+        } else {
+            current and IMMERSIVE_FLAGS.inv()
+        }
+        if (next != current) {
+            decorView.systemUiVisibility = next
+            if (verbose) {
+                YLog.debug("$TAG: system ui visibility -> 0x${next.toString(16)} (hidden=$hidden)")
+            }
+        }
+    }
+
+    private fun applyPanelSpaces(hidden: Boolean) {
+        val panel = panelRef?.get() ?: return
+        val panelClass = panel.javaClass
+        listOf("mTopSpace", "mBottomSpace").forEach { fieldName ->
+            val field = runCatching {
+                panelClass.getField(fieldName)
+            }.getOrNull() ?: return@forEach
+            val view = runCatching {
+                field.get(panel) as? View
+            }.getOrNull() ?: return@forEach
+            val target = if (hidden) View.GONE else View.VISIBLE
+            if (view.visibility != target) {
+                view.visibility = target
+                if (verbose) {
+                    YLog.debug("$TAG: panel space $fieldName -> ${if (hidden) "GONE" else "VISIBLE"}")
+                }
+            }
         }
     }
 
