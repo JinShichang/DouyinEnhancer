@@ -151,7 +151,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v6.5 active (bottom-probe build)")
+        YLog.debug("$TAG: CleanModeHooker v6.8 active (no id-container hiding)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
