@@ -406,8 +406,10 @@ object CleanModeHooker : YukiBaseHooker() {
         roots.forEach { root ->
             collectViewsWithIds(root, nativeCleanContainerIds, idViews)
         }
+        // 跳过包含弹幕视图的容器，避免清爽模式把弹幕也藏掉
+        val idViewsToToggle = idViews.filterNot { containsDanmakuView(it, classLoader) }
         var idChanged = 0
-        idViews.forEach { view ->
+        idViewsToToggle.forEach { view ->
             if (view.visibility != targetVisibility) {
                 view.visibility = targetVisibility
                 idChanged++
@@ -535,6 +537,8 @@ object CleanModeHooker : YukiBaseHooker() {
             YLog.debug("$TAG: holder dump fallback: VideoViewHolderRootView")
         }
         YLog.debug("$TAG: holder itemView dump (root=${root.javaClass.name})")
+        val rootHeight = root.bottom - root.top
+        YLog.debug("$TAG: bottom-strip candidates (rootHeight=$rootHeight)")
         val counter = intArrayOf(0)
         fun dumpView(view: View, prefix: String, depth: Int) {
             if (depth > 10 || counter[0] > 350) {
@@ -559,6 +563,63 @@ object CleanModeHooker : YukiBaseHooker() {
             }
         }
         dumpView(root, "", 0)
+        // 底部 600px 内、可见且高度有限的视图候选（可能遮挡视频底部）
+        val strip = ArrayList<View>()
+        collectBottomStripCandidates(root, rootHeight, strip)
+        for (v in strip) {
+            val lp = v.layoutParams
+            val lpText = if (lp is ViewGroup.MarginLayoutParams) {
+                "h=${lp.height} bottomMargin=${lp.bottomMargin}"
+            } else {
+                "lp=${lp?.javaClass?.simpleName}"
+            }
+            val idText = if (v.id != View.NO_ID) "id=0x${v.id.toString(16)}" else "id=no"
+            YLog.debug(
+                "$TAG:   [strip] ${v.javaClass.name} vis=${v.visibility} " +
+                    "top=${v.top} bottom=${v.bottom} $idText $lpText"
+            )
+        }
+    }
+
+    private fun collectBottomStripCandidates(view: View, rootHeight: Int, out: MutableList<View>) {
+        if (view is ViewGroup) {
+            val h = view.bottom - view.top
+            if (view.visibility == View.VISIBLE && view.bottom >= rootHeight - 600 && h in 1..1600) {
+                out.add(view)
+            }
+            for (i in 0 until view.childCount) {
+                collectBottomStripCandidates(view.getChildAt(i), rootHeight, out)
+            }
+        } else if (view.visibility == View.VISIBLE) {
+            val h = view.bottom - view.top
+            if (view.bottom >= rootHeight - 600 && h in 1..1600) {
+                out.add(view)
+            }
+        }
+    }
+
+    private fun containsDanmakuView(view: View, classLoader: ClassLoader): Boolean {
+        val danmakuClass = classCache.getOrPut("com.bytedance.common.ultra.danmaku.view.DanmakuView") {
+            runCatching {
+                classLoader.loadClass("com.bytedance.common.ultra.danmaku.view.DanmakuView")
+            }.getOrNull()
+        } ?: return false
+        return findFirstClassInstance(view, danmakuClass) != null
+    }
+
+    private fun findFirstClassInstance(view: View, clazz: Class<*>): View? {
+        if (clazz.isInstance(view)) {
+            return view
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val found = findFirstClassInstance(view.getChildAt(i), clazz)
+                if (found != null) {
+                    return found
+                }
+            }
+        }
+        return null
     }
 
     private fun collectViewsWithIds(view: View, ids: Set<Int>, out: MutableList<View>) {
