@@ -118,6 +118,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // 翻页器父容器原始底部 padding（清爽时清零让 pager 长到全屏）
     private val pagerAncestorPadding = HashMap<Int, Int>()
 
+    // RTViewPager 原始布局高度（清爽时直接撑到全屏）
+    private val pagerOriginalHeight = HashMap<Int, Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -147,7 +150,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.5 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.6 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -382,6 +385,7 @@ object CleanModeHooker : YukiBaseHooker() {
         }
         adjustBottomPlainSpacer(decorView, hidden)
         adjustPagerAncestors(decorView, classLoader, hidden)
+        adjustPagerHeight(decorView, classLoader, hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
         }
@@ -701,6 +705,36 @@ object CleanModeHooker : YukiBaseHooker() {
         if (!hidden) {
             pagerAncestorPadding.clear()
             hiddenBottomSpacers.clear()
+        }
+    }
+
+    /** 清爽隐藏时直接把翻页器(RTViewPager)高度设为屏幕全高 */
+    private fun adjustPagerHeight(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
+        val pagers = ArrayList<View>()
+        collectByClassName(decorView, classLoader, "com.ss.android.ugc.aweme.common.widget.VerticalViewPager", pagers)
+        val screenH = decorView.bottom - decorView.top
+        pagers.forEach { pager ->
+            val key = System.identityHashCode(pager)
+            val lp = pager.layoutParams ?: return@forEach
+            if (hidden) {
+                val original = pagerOriginalHeight[key] ?: lp.height
+                pagerOriginalHeight[key] = original
+                if (lp.height != screenH) {
+                    lp.height = screenH
+                    pager.layoutParams = lp
+                    pager.requestLayout()
+                    if (verbose) {
+                        YLog.debug("$TAG: RTViewPager height -> $screenH (orig $original)")
+                    }
+                }
+            } else {
+                val original = pagerOriginalHeight.remove(key)
+                if (original != null && lp.height != original) {
+                    lp.height = original
+                    pager.layoutParams = lp
+                    pager.requestLayout()
+                }
+            }
         }
     }
 
