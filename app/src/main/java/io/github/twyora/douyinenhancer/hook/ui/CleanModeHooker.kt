@@ -24,10 +24,9 @@ import java.lang.ref.WeakReference
  *
  * 参考 dyoo：
  * - 播放/恢复/切页自动播放 -> 整体隐藏悬浮控件，同时进入沉浸（隐藏状态栏/导航栏），
- *   并把 feed 面板的顶/底 spacer 收起，让视频真正铺满全屏；
- * - 暂停/播放结束 -> 全部恢复（控件、状态栏、spacer）。
- *
- * 抖音冷启动首条视频的部分行为（元素后出现等）为原生现象；本模块只对自身隐藏逻辑负责。
+ *   并把 feed 面板的顶/底 spacer 高度清零，让视频铺满全屏；
+ * - 暂停/播放结束 -> 全部恢复（控件、状态栏、spacer）；
+ * - 滚动切页期间不执行“恢复”，状态栏在清爽隐藏期间由看守逻辑保持不出现。
  */
 @HookOnMainProcess
 object CleanModeHooker : YukiBaseHooker() {
@@ -54,8 +53,15 @@ object CleanModeHooker : YukiBaseHooker() {
     private val hidePlayVideoTypes = setOf(VIDEO_EVENT_TEXTURE_AVAILABLE, VIDEO_EVENT_RESUME_1, VIDEO_EVENT_RESUME_2)
     private val showPlayVideoTypes = setOf(VIDEO_EVENT_PAUSE_CLICK, VIDEO_EVENT_PAUSE_1, VIDEO_EVENT_PAUSE_2)
 
-    // dyoo 使用的沉浸标志位：IMMERSIVE_STICKY | LAYOUT_HIDE_NAVIGATION | FULLSCREEN | HIDE_NAVIGATION
-    private const val IMMERSIVE_FLAGS = 4614
+    /**
+     * 沉浸标志位（含 layout 标志，避免隐藏系统栏时内容区重排导致抖动）：
+     * LAYOUT_STABLE(256) | LAYOUT_FULLSCREEN(1024) | LAYOUT_HIDE_NAVIGATION(512) |
+     * FULLSCREEN(4) | HIDE_NAVIGATION(2) | IMMERSIVE_STICKY(4096) = 5894
+     */
+    private const val IMMERSIVE_FLAGS = 5894
+
+    // 状态栏/导航栏是否被隐藏的判定位：FULLSCREEN(4) | HIDE_NAVIGATION(2)
+    private const val HIDDEN_BAR_FLAGS = 6
 
     private const val HOST_PANEL_CLASS = "com.ss.android.ugc.aweme.feed.panel.BaseListFragmentPanel"
     private const val HOST_AWEME_CLASS = "com.ss.android.ugc.aweme.feed.model.Aweme"
@@ -101,6 +107,9 @@ object CleanModeHooker : YukiBaseHooker() {
 
     private val classCache = HashMap<String, Class<*>?>()
 
+    // 面板顶/底 spacer 的原始高度（按 view 的 identityHashCode 保存）
+    private val spaceOriginalHeights = HashMap<Int, Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = Runnable {
         if (cleanHidden) {
@@ -110,9 +119,15 @@ object CleanModeHooker : YukiBaseHooker() {
 
     private var mainActivityRef: WeakReference<Activity>? = null
     private var panelRef: WeakReference<Any>? = null
+    private var systemUiKeeperDecor: WeakReference<View>? = null
+    private var systemUiKeeperListener: View.OnSystemUiVisibilityChangeListener? = null
 
     @Volatile
     private var cleanHidden = false
+
+    /** 内容流正在滚动/切页：期间忽略“恢复显示”，避免状态栏闪出 */
+    @Volatile
+    private var pagerDragging = false
 
     override fun onHook() {
         if (!FastKVConfigManager.settings.getBoolean(CleanModeKey.MAIN_SWITCH, false)) {
@@ -194,8 +209,13 @@ object CleanModeHooker : YukiBaseHooker() {
             panelClass.resolveMethod(method)?.hook {
                 after {
                     capturePanel(instance)
-                    val isScrolling = method.name == "onPageScrollStateChanged" && (args[0] as? Int) != 0
-                    if (!isScrolling) {
+                    if (method.name == "onPageScrollStateChanged") {
+                        val state = args[0] as? Int ?: return@after
+                        pagerDragging = state != 0
+                        if (state == 0) {
+                            applyCleanMode(hidden = true)
+                        }
+                    } else {
                         applyCleanMode(hidden = true)
                     }
                 }
@@ -264,13 +284,18 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     private fun applyCleanMode(hidden: Boolean) {
+        if (!hidden && pagerDragging) {
+            // 滚动切页期间不恢复，避免状态栏/控件闪出
+            return
+        }
         if (hidden == cleanHidden) {
             return
         }
         cleanHidden = hidden
         applyOverlayVisibility(hidden, log = true)
+        mainHandler.removeCallbacks(rehideRunnable)
         if (hidden) {
-            mainHandler.removeCallbacks(rehideRunnable)
+            // 顶栏/底栏等可能晚于播放事件出现，延迟再扫两次
             mainHandler.postDelayed(rehideRunnable, 600L)
             mainHandler.postDelayed(rehideRunnable, 2000L)
         }
@@ -310,18 +335,49 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     private fun applySystemBars(decorView: View, hidden: Boolean) {
-        val current = decorView.systemUiVisibility
-        val next = if (hidden) {
-            current or IMMERSIVE_FLAGS
+        if (hidden) {
+            if (decorView.systemUiVisibility and IMMERSIVE_FLAGS != IMMERSIVE_FLAGS) {
+                decorView.systemUiVisibility = decorView.systemUiVisibility or IMMERSIVE_FLAGS
+                if (verbose) {
+                    YLog.debug("$TAG: immersive flags applied 0x${IMMERSIVE_FLAGS.toString(16)}")
+                }
+            }
+            attachSystemUiKeeper(decorView)
         } else {
-            current and IMMERSIVE_FLAGS.inv()
-        }
-        if (next != current) {
-            decorView.systemUiVisibility = next
-            if (verbose) {
-                YLog.debug("$TAG: system ui visibility -> 0x${next.toString(16)} (hidden=$hidden)")
+            detachSystemUiKeeper(decorView)
+            if (decorView.systemUiVisibility and IMMERSIVE_FLAGS != 0) {
+                decorView.systemUiVisibility = decorView.systemUiVisibility and IMMERSIVE_FLAGS.inv()
+                if (verbose) {
+                    YLog.debug("$TAG: immersive flags cleared")
+                }
             }
         }
+    }
+
+    /** 清爽隐藏期间：一旦系统栏可见性被抖音改回，立刻再次隐藏 */
+    private fun attachSystemUiKeeper(decorView: View) {
+        val previous = systemUiKeeperDecor?.get()
+        if (previous != null && previous !== decorView) {
+            detachSystemUiKeeper(previous)
+        }
+        if (systemUiKeeperListener != null) {
+            return
+        }
+        val listener = View.OnSystemUiVisibilityChangeListener { visibility ->
+            if (cleanHidden && visibility and HIDDEN_BAR_FLAGS != HIDDEN_BAR_FLAGS) {
+                decorView.systemUiVisibility = decorView.systemUiVisibility or IMMERSIVE_FLAGS
+            }
+        }
+        systemUiKeeperListener = listener
+        systemUiKeeperDecor = WeakReference(decorView)
+        decorView.setOnSystemUiVisibilityChangeListener(listener)
+    }
+
+    private fun detachSystemUiKeeper(decorView: View) {
+        val listener = systemUiKeeperListener ?: return
+        decorView.setOnSystemUiVisibilityChangeListener(null)
+        systemUiKeeperListener = null
+        systemUiKeeperDecor = null
     }
 
     private fun applyPanelSpaces(hidden: Boolean) {
@@ -334,11 +390,17 @@ object CleanModeHooker : YukiBaseHooker() {
             val view = runCatching {
                 field.get(panel) as? View
             }.getOrNull() ?: return@forEach
-            val target = if (hidden) View.GONE else View.VISIBLE
-            if (view.visibility != target) {
-                view.visibility = target
+            val key = System.identityHashCode(view)
+            val layoutParams = view.layoutParams ?: return@forEach
+            val original = spaceOriginalHeights[key] ?: layoutParams.height
+            spaceOriginalHeights[key] = original
+            val target = if (hidden) 0 else original
+            if (layoutParams.height != target) {
+                layoutParams.height = target
+                view.layoutParams = layoutParams
+                view.requestLayout()
                 if (verbose) {
-                    YLog.debug("$TAG: panel space $fieldName -> ${if (hidden) "GONE" else "VISIBLE"}")
+                    YLog.debug("$TAG: panel space $fieldName height -> $target (original $original)")
                 }
             }
         }
