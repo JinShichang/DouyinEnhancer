@@ -467,15 +467,45 @@ object CleanModeHooker : YukiBaseHooker() {
         dumpView(decor, "  ", 0)
     }
 
-    /** 打印当前 feed 项根视图（holder.itemView）子树，定位底部被遮挡的视图 */
+    /** 打印当前 feed 项根视图子树，定位底部被遮挡的视图 */
     private fun dumpHolderTree() {
-        val panel = panelRef?.get() ?: return
-        val holder = runCatching {
-            panel.javaClass.getMethod("getCurViewHolder").invoke(panel)
-        }.getOrNull() ?: return
-        val root = runCatching {
-            holder.javaClass.getField("itemView").get(holder) as? View
-        }.getOrNull() ?: return
+        val panel = panelRef?.get()
+        if (panel == null) {
+            YLog.debug("$TAG: holder dump skipped, panel not captured")
+            return
+        }
+        var root: View? = null
+        runCatching {
+            val holder = panel.javaClass.getMethod("getCurViewHolder").invoke(panel)
+            root = holder?.javaClass?.getField("itemView")?.get(holder) as? View
+            if (root == null) {
+                YLog.debug("$TAG: holder dump: holder or itemView null (holder=${holder?.javaClass?.name})")
+            }
+        }.onFailure { e ->
+            YLog.debug("$TAG: holder dump via holder failed: $e")
+        }
+        if (root == null) {
+            // 回退：在 decor 里找第一个 VideoViewHolderRootView 打印
+            val activity = mainActivityRef?.get()
+            val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader
+            if (activity == null || loader == null) {
+                YLog.debug("$TAG: holder dump skipped, no fallback root")
+                return
+            }
+            val found = ArrayList<View>()
+            collectByClassName(
+                activity.window?.decorView ?: return,
+                loader,
+                "com.ss.android.ugc.aweme.ad.feed.VideoViewHolderRootView",
+                found
+            )
+            root = found.firstOrNull()
+            if (root == null) {
+                YLog.debug("$TAG: holder dump skipped, no VideoViewHolderRootView found")
+                return
+            }
+            YLog.debug("$TAG: holder dump fallback: VideoViewHolderRootView")
+        }
         YLog.debug("$TAG: holder itemView dump (root=${root.javaClass.name})")
         val counter = intArrayOf(0)
         fun dumpView(view: View, prefix: String, depth: Int) {
@@ -501,6 +531,22 @@ object CleanModeHooker : YukiBaseHooker() {
             }
         }
         dumpView(root, "", 0)
+    }
+
+    private fun collectByClassName(view: View, classLoader: ClassLoader, className: String, out: MutableList<View>) {
+        val clazz = classCache.getOrPut(className) {
+            runCatching {
+                classLoader.loadClass(className)
+            }.getOrNull()
+        }
+        if (clazz != null && clazz.isInstance(view)) {
+            out.add(view)
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                collectByClassName(view.getChildAt(i), classLoader, className, out)
+            }
+        }
     }
 
     private fun collectOverlayViews(view: View, classLoader: ClassLoader, out: MutableList<View>) {
