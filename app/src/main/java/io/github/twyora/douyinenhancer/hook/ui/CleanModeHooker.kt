@@ -112,6 +112,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已对哪些留白视图做过首次 requestLayout（只做一次，避免反复重排）
     private val spaceZeroedOnce = HashSet<Int>()
 
+    // 被我们隐藏的“底部全宽纯占位 View”（dyoo 删 spacer 的等价物）
+    private val hiddenBottomSpacers = HashMap<Int, WeakReference<View>>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -141,7 +144,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.2 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.3 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -374,8 +377,52 @@ object CleanModeHooker : YukiBaseHooker() {
                 changed++
             }
         }
+        adjustBottomPlainSpacer(decorView, hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
+        }
+    }
+
+    /** 清爽隐藏时隐藏屏幕底部“全宽纯 View 占位”（dyoo 删 spacer 思路），暂停恢复 */
+    private fun adjustBottomPlainSpacer(decorView: View, hidden: Boolean) {
+        if (hidden) {
+            val screenH = decorView.bottom - decorView.top
+            val screenW = decorView.right - decorView.left
+            collectPlainBottomViews(decorView, screenW, screenH, this::recordAndHideSpacer)
+        } else {
+            val it = hiddenBottomSpacers.entries.iterator()
+            while (it.hasNext()) {
+                val e = it.next()
+                val v = e.value.get()
+                it.remove()
+                if (v != null && v.visibility != View.VISIBLE) {
+                    v.visibility = View.VISIBLE
+                }
+            }
+        }
+    }
+
+    private fun recordAndHideSpacer(view: View) {
+        hiddenBottomSpacers[System.identityHashCode(view)] = WeakReference(view)
+        if (view.visibility != View.GONE) {
+            view.visibility = View.GONE
+            if (verbose) {
+                YLog.debug("$TAG: bottom plain spacer hidden ${view.javaClass.name} top=${view.top} bottom=${view.bottom}")
+            }
+        }
+    }
+
+    private fun collectPlainBottomViews(view: View, screenW: Int, screenH: Int, onFound: (View) -> Unit) {
+        if (view !is ViewGroup) {
+            if (view.javaClass.name == "android.view.View" && view.visibility == View.VISIBLE &&
+                view.bottom >= screenH - 300 && (view.right - view.left) >= screenW - 4 && (view.bottom - view.top) in 50..400
+            ) {
+                onFound(view)
+            }
+            return
+        }
+        for (i in 0 until view.childCount) {
+            collectPlainBottomViews(view.getChildAt(i), screenW, screenH, onFound)
         }
     }
 
