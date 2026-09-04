@@ -144,7 +144,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.3 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.4 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -343,7 +343,7 @@ object CleanModeHooker : YukiBaseHooker() {
             mainHandler.postDelayed(rehideRunnable, 800L)
             mainHandler.postDelayed(rehideRunnable, 2500L)
             if (verbose) {
-                dumpBottomRegionViews()
+                dumpLayoutStructure()
             }
         }
     }
@@ -633,6 +633,51 @@ object CleanModeHooker : YukiBaseHooker() {
             }
         }
         walk(decor, "", 0)
+    }
+
+    /** 打印底栏/翻页器及其父容器结构与高度，定位 196px 由谁占用 */
+    private fun dumpLayoutStructure() {
+        val activity = mainActivityRef?.get() ?: return
+        val decor = activity.window?.decorView ?: return
+        val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return
+        YLog.debug("$TAG: layout structure probe")
+        listOf(
+            "com.ss.android.ugc.aweme.homepage.ui.bottombar.MainBottomTabContainer",
+            "com.ss.android.ugc.aweme.common.widget.VerticalViewPager",
+            "com.ss.android.ugc.aweme.homepage.ui.view.MainScrollableViewPager"
+        ).forEach { clsName ->
+            val found = ArrayList<View>()
+            collectByClassName(decor, loader, clsName, found)
+            YLog.debug("$TAG:   $clsName -> ${found.size} instance(s)")
+            found.forEachIndexed { idx, v ->
+                YLog.debug(
+                    "$TAG:     [$idx] ${v.javaClass.name} vis=${v.visibility} top=${v.top} bottom=${v.bottom} " +
+                        "w=${v.right - v.left} lp=${describeLp(v.layoutParams)}"
+                )
+                var parent = v.parent
+                var depth = 0
+                while (parent is ViewGroup && depth < 4) {
+                    val pv = parent
+                    YLog.debug(
+                        "$TAG:        parent$depth ${pv.javaClass.name} vis=${pv.visibility} top=${pv.top} " +
+                            "bottom=${pv.bottom} w=${pv.right - pv.left} lp=${describeLp(pv.layoutParams)} children=${pv.childCount}"
+                    )
+                    parent = pv.parent
+                    depth++
+                }
+            }
+        }
+    }
+
+    private fun describeLp(lp: ViewGroup.LayoutParams?): String {
+        if (lp == null) {
+            return "null"
+        }
+        val mlp = lp as? ViewGroup.MarginLayoutParams
+        val weight = runCatching {
+            lp.javaClass.getField("weight").get(lp)
+        }.getOrNull()
+        return "h=${lp.height} w=${lp.width} bottomMargin=${mlp?.bottomMargin} weight=$weight"
     }
 
     private fun collectByClassName(view: View, classLoader: ClassLoader, className: String, out: MutableList<View>) {
