@@ -110,9 +110,13 @@ object CleanModeHooker : YukiBaseHooker() {
     private val classCache = HashMap<String, Class<*>?>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val rehideRunnable = Runnable {
-        if (overlaysHidden) {
-            applyOverlayVisibility(hidden = true, log = false)
+    private val rehideRunnable = object : Runnable {
+        override fun run() {
+            if (overlaysHidden) {
+                applyOverlayVisibility(hidden = true, log = false)
+                // 清爽隐藏期间持续补扫，抓晚出现的作者/文案/右侧列/弹幕/合集/相关搜索等
+                mainHandler.postDelayed(this, 1500L)
+            }
         }
     }
 
@@ -141,6 +145,24 @@ object CleanModeHooker : YukiBaseHooker() {
 
     /** 任何 Activity 恢复时都强制沉浸全屏（清爽开启期间状态栏/导航栏永不出现） */
     private fun installGlobalImmersiveHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
+        // onCreate 之前就生效：保证 feed 首次布局即处于全屏，避免“视频铺不到底”的时机竞争
+        Activity::class.java.resolveMethod(
+            Method("onCreate", listOf("android.os.Bundle"))
+        )?.hook {
+            before {
+                val activity = instance as? Activity ?: return@before
+                mainActivityRef = WeakReference(activity)
+                applyPersistentImmersive(activity)
+            }
+        }?.result {
+            onConductFailure { _, throwable ->
+                YLog.error("$TAG: failed to enforce immersive before activity create", throwable)
+            }
+            onHookingFailure { throwable ->
+                YLog.error("$TAG: failed to hook activity create", throwable)
+            }
+        }
+
         return Activity::class.java.resolveMethod(
             Method("onResume", emptyList())
         )?.hook {
@@ -292,11 +314,7 @@ object CleanModeHooker : YukiBaseHooker() {
         applyOverlayVisibility(hidden, log = true)
         mainHandler.removeCallbacks(rehideRunnable)
         if (hidden) {
-            // 顶栏/底栏等可能晚于播放事件出现，延迟补扫
             mainHandler.postDelayed(rehideRunnable, 600L)
-            mainHandler.postDelayed(rehideRunnable, 1500L)
-            mainHandler.postDelayed(rehideRunnable, 3000L)
-            mainHandler.postDelayed(rehideRunnable, 5000L)
         }
     }
 
@@ -340,15 +358,13 @@ object CleanModeHooker : YukiBaseHooker() {
             decorView.systemUiVisibility = current or IMMERSIVE_FLAGS
         }
 
-        val previous = immersiveDecorRef?.get()
-        if (previous == null || previous !== decorView) {
-            decorView.setOnSystemUiVisibilityChangeListener { visibility ->
-                if (visibility and HIDDEN_BAR_FLAGS != HIDDEN_BAR_FLAGS) {
-                    decorView.systemUiVisibility = decorView.systemUiVisibility or IMMERSIVE_FLAGS
-                }
+        // 每次活动恢复都重新挂看守（抖音可能覆盖监听器）
+        decorView.setOnSystemUiVisibilityChangeListener { visibility ->
+            if (visibility and HIDDEN_BAR_FLAGS != HIDDEN_BAR_FLAGS) {
+                decorView.systemUiVisibility = decorView.systemUiVisibility or IMMERSIVE_FLAGS
             }
-            immersiveDecorRef = WeakReference(decorView)
         }
+        immersiveDecorRef = WeakReference(decorView)
     }
 
     /** feed 面板顶/底留白清零（视频铺满），清爽开启期间保持 */
