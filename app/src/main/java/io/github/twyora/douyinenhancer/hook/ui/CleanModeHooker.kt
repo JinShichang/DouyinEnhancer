@@ -112,6 +112,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已对哪些留白视图做过首次 requestLayout（只做一次，避免反复重排）
     private val spaceZeroedOnce = HashSet<Int>()
 
+    // MainScrollableViewPager 原始底部 padding（清爽隐藏时清零以让页面铺满全屏）
+    private val pagerOriginalBottomPadding = HashMap<Int, Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -389,8 +392,27 @@ object CleanModeHooker : YukiBaseHooker() {
                 changed++
             }
         }
+        adjustFeedPagerForFullscreen(decorView, classLoader, hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
+        }
+    }
+
+    /** 清爽隐藏时清零 feed 竖向 ViewPager 的底部 padding，让每页高度=全屏（dyoo 删 spacer 的 38.8.0 等价做法） */
+    private fun adjustFeedPagerForFullscreen(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
+        val pagers = ArrayList<View>()
+        collectByClassName(decorView, classLoader, "com.ss.android.ugc.aweme.homepage.ui.view.MainScrollableViewPager", pagers)
+        pagers.forEach { pager ->
+            val key = System.identityHashCode(pager)
+            val original = pagerOriginalBottomPadding[key] ?: pager.paddingBottom
+            pagerOriginalBottomPadding[key] = original
+            val targetBottom = if (hidden) 0 else original
+            if (pager.paddingBottom != targetBottom) {
+                pager.setPadding(pager.paddingLeft, pager.paddingTop, pager.paddingRight, targetBottom)
+                if (verbose) {
+                    YLog.debug("$TAG: feed pager bottom padding -> $targetBottom (original $original)")
+                }
+            }
         }
     }
 
