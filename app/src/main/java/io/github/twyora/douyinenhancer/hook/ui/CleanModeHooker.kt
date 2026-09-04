@@ -115,6 +115,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // 被我们隐藏的“底部全宽纯占位 View”（dyoo 删 spacer 的等价物）
     private val hiddenBottomSpacers = HashMap<Int, WeakReference<View>>()
 
+    // 翻页器父容器原始底部 padding（清爽时清零让 pager 长到全屏）
+    private val pagerAncestorPadding = HashMap<Int, Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -144,7 +147,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.4 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.5 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -378,6 +381,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
         }
         adjustBottomPlainSpacer(decorView, hidden)
+        adjustPagerAncestors(decorView, classLoader, hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
         }
@@ -666,6 +670,37 @@ object CleanModeHooker : YukiBaseHooker() {
                     depth++
                 }
             }
+        }
+    }
+
+    /** 清爽隐藏时清零翻页器各级父容器底部 padding，让 RTViewPager 高度=父高（页面=全屏） */
+    private fun adjustPagerAncestors(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
+        val pagers = ArrayList<View>()
+        collectByClassName(decorView, classLoader, "com.ss.android.ugc.aweme.common.widget.VerticalViewPager", pagers)
+        val touched = HashSet<Int>()
+        pagers.forEach { pager ->
+            var parent = pager.parent
+            var depth = 0
+            while (parent is ViewGroup && depth < 6) {
+                val key = System.identityHashCode(parent)
+                if (touched.add(key)) {
+                    val original = pagerAncestorPadding[key] ?: parent.paddingBottom
+                    pagerAncestorPadding[key] = original
+                    val target = if (hidden) 0 else original
+                    if (parent.paddingBottom != target) {
+                        parent.setPadding(parent.paddingLeft, parent.paddingTop, parent.paddingRight, target)
+                        if (verbose) {
+                            YLog.debug("$TAG: pager ancestor ${parent.javaClass.name} bottom padding -> $target (orig $original)")
+                        }
+                    }
+                }
+                parent = parent.parent
+                depth++
+            }
+        }
+        if (!hidden) {
+            pagerAncestorPadding.clear()
+            hiddenBottomSpacers.clear()
         }
     }
 
