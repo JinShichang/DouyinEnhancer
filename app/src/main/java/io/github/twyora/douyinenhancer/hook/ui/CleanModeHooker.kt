@@ -354,6 +354,7 @@ object CleanModeHooker : YukiBaseHooker() {
             mainHandler.postDelayed(suppressRunnable, 1000L)
             if (verbose) {
                 dumpDecorChildren()
+                dumpHolderTree()
             }
         }
     }
@@ -464,6 +465,42 @@ object CleanModeHooker : YukiBaseHooker() {
             }
         }
         dumpView(decor, "  ", 0)
+    }
+
+    /** 打印当前 feed 项根视图（holder.itemView）子树，定位底部被遮挡的视图 */
+    private fun dumpHolderTree() {
+        val panel = panelRef?.get() ?: return
+        val holder = runCatching {
+            panel.javaClass.getMethod("getCurViewHolder").invoke(panel)
+        }.getOrNull() ?: return
+        val root = runCatching {
+            holder.javaClass.getField("itemView").get(holder) as? View
+        }.getOrNull() ?: return
+        YLog.debug("$TAG: holder itemView dump (root=${root.javaClass.name})")
+        val counter = intArrayOf(0)
+        fun dumpView(view: View, prefix: String, depth: Int) {
+            if (depth > 10 || counter[0] > 350) {
+                return
+            }
+            counter[0]++
+            val lp = view.layoutParams
+            val lpText = if (lp is ViewGroup.MarginLayoutParams) {
+                "h=${lp.height} bottomMargin=${lp.bottomMargin} topMargin=${lp.topMargin}"
+            } else {
+                "lp=${lp?.javaClass?.simpleName}"
+            }
+            val idText = if (view.id != View.NO_ID) "id=0x${view.id.toString(16)}" else "id=no"
+            YLog.debug(
+                "$TAG:   $prefix ${view.javaClass.name} vis=${view.visibility} " +
+                    "top=${view.top} bottom=${view.bottom} $idText $lpText"
+            )
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    dumpView(view.getChildAt(i), "$prefix$i.", depth + 1)
+                }
+            }
+        }
+        dumpView(root, "", 0)
     }
 
     private fun collectOverlayViews(view: View, classLoader: ClassLoader, out: MutableList<View>) {
