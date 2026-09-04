@@ -112,6 +112,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已对哪些留白视图做过首次 requestLayout（只做一次，避免反复重排）
     private val spaceZeroedOnce = HashSet<Int>()
 
+    // VerticalViewPager 原始底部 padding（清零后每页高度=全屏）
+    private val vpOriginalBottomPadding = HashMap<Int, Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -141,7 +144,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7 active (module 0.11.1, no native-clean call, no 1s suppressor)")
+        YLog.debug("$TAG: CleanModeHooker v8 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -371,8 +374,27 @@ object CleanModeHooker : YukiBaseHooker() {
                 changed++
             }
         }
+        adjustVerticalPagerPadding(decorView, classLoader, hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
+        }
+    }
+
+    /** 清爽隐藏时清零 feed VerticalViewPager 底部 padding，让每页高度=全屏（onMeasure: 页高=自身高-上下padding） */
+    private fun adjustVerticalPagerPadding(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
+        val pagers = ArrayList<View>()
+        collectByClassName(decorView, classLoader, "com.ss.android.ugc.aweme.common.widget.VerticalViewPager", pagers)
+        pagers.forEach { pager ->
+            val key = System.identityHashCode(pager)
+            val original = vpOriginalBottomPadding[key] ?: pager.paddingBottom
+            vpOriginalBottomPadding[key] = original
+            val target = if (hidden) 0 else original
+            if (pager.paddingBottom != target) {
+                pager.setPadding(pager.paddingLeft, pager.paddingTop, pager.paddingRight, target)
+                if (verbose) {
+                    YLog.debug("$TAG: VerticalViewPager bottom padding -> $target (original $original)")
+                }
+            }
         }
     }
 
