@@ -109,6 +109,9 @@ object CleanModeHooker : YukiBaseHooker() {
 
     private val classCache = HashMap<String, Class<*>?>()
 
+    // 已对哪些留白视图做过首次 requestLayout（只做一次，避免反复重排）
+    private val spaceZeroedOnce = HashSet<Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -301,6 +304,24 @@ object CleanModeHooker : YukiBaseHooker() {
         }
     }
 
+    /** 调用当前 feed 项 VideoViewHolder.openCleanMode，让抖音原生清爽逻辑隐藏/恢复其全部控件 */
+    private fun setNativeItemClean(hidden: Boolean) {
+        val panel = panelRef?.get() ?: return
+        val holder = runCatching {
+            panel.javaClass.getMethod("getCurViewHolder").invoke(panel)
+        }.getOrNull() ?: return
+        runCatching {
+            val method = holder.javaClass.getMethod("openCleanMode", Boolean::class.javaPrimitiveType)
+            method.isAccessible = true
+            method.invoke(holder, hidden)
+            if (verbose) {
+                YLog.debug("$TAG: native openCleanMode($hidden) invoked on ${holder.javaClass.name}")
+            }
+        }.onFailure { throwable ->
+            YLog.error("$TAG: failed to invoke native openCleanMode", throwable)
+        }
+    }
+
     /** 只控制悬浮控件显隐；系统栏由全程沉浸负责，不再随暂停恢复 */
     private fun applyOverlayMode(hidden: Boolean) {
         if (!hidden && pagerDragging) {
@@ -310,6 +331,8 @@ object CleanModeHooker : YukiBaseHooker() {
             return
         }
         overlaysHidden = hidden
+        // 调用抖音原生 per-holder 清爽接口，让抖音自己隐藏/恢复其控件（避免手动 GONE 打架）
+        setNativeItemClean(hidden)
         // 只在进入隐藏的瞬间清零留白（避免抖音重置后我们反复清零造成抖动）
         applyOverlayVisibility(hidden, log = true, zeroSpaces = hidden)
         mainHandler.removeCallbacks(rehideRunnable)
@@ -384,10 +407,12 @@ object CleanModeHooker : YukiBaseHooker() {
             val layoutParams = view.layoutParams ?: return@forEach
             if (layoutParams.height != 0) {
                 layoutParams.height = 0
-                view.layoutParams = layoutParams
-                view.requestLayout()
+                if (spaceZeroedOnce.add(System.identityHashCode(view))) {
+                    // 首次清零才主动布局一次以生效，之后交给抖音自身布局，避免反复重排抖动
+                    view.requestLayout()
+                }
                 if (verbose) {
-                    YLog.debug("$TAG: panel space $fieldName height zeroed")
+                    YLog.debug("$TAG: panel space $fieldName height set to 0")
                 }
             }
         }
