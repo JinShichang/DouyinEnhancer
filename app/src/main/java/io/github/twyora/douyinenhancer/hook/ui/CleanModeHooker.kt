@@ -107,6 +107,16 @@ object CleanModeHooker : YukiBaseHooker() {
         "com.ss.android.ugc.aweme.feed.widget.MarqueeView"
     )
 
+    /** 抖音原生清屏 presenter 会隐藏的容器 id（h/i/j/k/l/m），作为 class 清单的兜底 */
+    private val nativeCleanContainerIds = setOf(
+        0x7f0a01db, // h: PenetrateTouchRelativeLayout（悬浮层容器）
+        0x7f0a49de, // i: 底部信息/相关区域容器
+        0x7f0a9c2b, // j
+        0x7f0a9c2c, // k
+        0x7f0a3e34, // l
+        0x7f0a3e33 // m
+    )
+
     private val classCache = HashMap<String, Class<*>?>()
 
     // 已对哪些留白视图做过首次 requestLayout（只做一次，避免反复重排）
@@ -389,8 +399,25 @@ object CleanModeHooker : YukiBaseHooker() {
                 changed++
             }
         }
-        if (log || changed > 0) {
-            YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
+        // 兜底：隐藏/恢复抖音原生清屏容器 id（覆盖未被 class 清单命中的底部容器等）
+        val roots = ArrayList<View>()
+        collectByClassName(decorView, classLoader, "com.ss.android.ugc.aweme.ad.feed.VideoViewHolderRootView", roots)
+        val idViews = ArrayList<View>()
+        roots.forEach { root ->
+            collectViewsWithIds(root, nativeCleanContainerIds, idViews)
+        }
+        var idChanged = 0
+        idViews.forEach { view ->
+            if (view.visibility != targetVisibility) {
+                view.visibility = targetVisibility
+                idChanged++
+            }
+        }
+        if (log || changed > 0 || idChanged > 0) {
+            YLog.debug(
+                "$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed class views, " +
+                    "$idChanged id-container views (roots=${roots.size})"
+            )
         }
     }
 
@@ -532,6 +559,17 @@ object CleanModeHooker : YukiBaseHooker() {
             }
         }
         dumpView(root, "", 0)
+    }
+
+    private fun collectViewsWithIds(view: View, ids: Set<Int>, out: MutableList<View>) {
+        if (view.id != View.NO_ID && view.id in ids) {
+            out.add(view)
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                collectViewsWithIds(view.getChildAt(i), ids, out)
+            }
+        }
     }
 
     private fun collectByClassName(view: View, classLoader: ClassLoader, className: String, out: MutableList<View>) {
