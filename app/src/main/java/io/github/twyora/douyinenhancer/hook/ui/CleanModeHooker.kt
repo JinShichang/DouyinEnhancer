@@ -125,81 +125,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已成功把翻页器撑到全屏的实例（清爽期间保持，不随暂停恢复）
     private val pagerFullscreenApplied = HashSet<Int>()
 
-    // 已还原过的页内悬浮控件（记录原 translationY 以便播放时复位）
-    private val pauseLiftedViews = HashMap<Int, Float>()
-    private val pauseLiftClassNames = listOf(
-        "com.ss.android.ugc.aweme.feed.ui.AwemeIntroInfoLayout",
-        "com.ss.android.ugc.aweme.feed.ui.FeedRightScaleView",
-        "com.ss.android.ugc.aweme.feed.ui.musiccover.MusicCoverContainerLayout"
-    )
-
-    // —— 基准方案：首个视频保持原生并录制元素底边位置，第二个视频起再清爽 ——
-    private var baselineCaptured = false
-    private var baselineAttempts = 0
-
-    // 类名 -> 首个视频（原生、底栏可见）时屏内实例的窗口底边 y
-    private val baselineBottomByClass = HashMap<String, Int>()
-
-    // 是否已允许清爽（录好基准且已翻页到第二个视频之后）
-    private var cleanAllowed = false
-    private var dragSeenAfterBaseline = false
-    private val baselineRunnable = object : Runnable {
-        override fun run() {
-            if (baselineCaptured) {
-                return
-            }
-            if (baselineAttempts++ >= 30) {
-                // 长时间没录到也放行，避免清爽永远不生效（这类元素暂停时就不还原）
-                baselineCaptured = true
-                YLog.debug("$TAG: baseline capture timeout, clean proceeds without pause restore")
-                return
-            }
-            if (tryCaptureBaseline()) {
-                baselineCaptured = true
-                if (dragSeenAfterBaseline && !cleanAllowed) {
-                    // 用户已翻页但基准刚录完：直接放行，不必再等下一次翻页
-                    cleanAllowed = true
-                    if (verbose) {
-                        YLog.debug("$TAG: clean allowed right after baseline (page already switched)")
-                    }
-                }
-                if (cleanAllowed) {
-                    applyOverlayMode(hidden = true)
-                }
-            } else {
-                mainHandler.postDelayed(this, 400L)
-            }
-        }
-    }
-
-    // 暂停还原的补打（抖音动画/晚渲染可能把 translationY 复位，需隔段时间重打）
-    private val pauseReassertRunnable = object : Runnable {
-        override fun run() {
-            if (overlaysHidden || !cleanAllowed) {
-                return
-            }
-            val activity = mainActivityRef?.get() ?: return
-            val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return
-            val decor = activity.window?.decorView ?: return
-            applyPauseLift(decor, loader, show = true)
-        }
-    }
-
-    // 试探圆角修复：进入清爽后主动重排主页容器（等效于切后台/暂停再继续触发的重排）
-    private val roundingRefreshRunnable = object : Runnable {
-        override fun run() {
-            val activity = mainActivityRef?.get() ?: return
-            val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return
-            val decor = activity.window?.decorView ?: return
-            val hosts = ArrayList<View>()
-            collectByClassName(decor, loader, "com.ss.android.ugc.aweme.homepage.ui.view.MainScrollableViewPager", hosts)
-            hosts.forEach { it.requestLayout() }
-            decor.requestLayout()
-            if (verbose) {
-                YLog.debug("$TAG: rounding refresh relayout triggered")
-            }
-        }
-    }
+    // RTViewPager 原始 layout_above/below 锚定 id（暂停时还原抖音原生布局用）
+    private val pagerOriginalRuleAbove = HashMap<Int, Int>()
+    private val pagerOriginalRuleBelow = HashMap<Int, Int>()
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
@@ -230,7 +158,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.13 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.14 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -323,18 +251,7 @@ object CleanModeHooker : YukiBaseHooker() {
                     if (method.name == "onPageScrollStateChanged") {
                         val state = args[0] as? Int ?: return@after
                         pagerDragging = state != 0
-                        if (baselineCaptured && !cleanAllowed) {
-                            if (state != 0) {
-                                dragSeenAfterBaseline = true
-                            } else if (dragSeenAfterBaseline) {
-                                cleanAllowed = true
-                                if (verbose) {
-                                    YLog.debug("$TAG: clean allowed from 2nd video (baseline captured)")
-                                }
-                            }
-                        }
-                        // 任何翻页状态都补扫隐藏：切页时抖音会短暂重新显示新页控件，
-                        // 只在 state==0 时处理会漏（且原实现同态直接 return，导致残留到下次事件）
+                        // 任何翻页状态都补扫隐藏：切页时抖音会短暂重新显示新页控件
                         applyOverlayMode(hidden = true)
                     } else {
                         applyOverlayMode(hidden = true)
@@ -429,14 +346,6 @@ object CleanModeHooker : YukiBaseHooker() {
             return
         }
         if (hidden) {
-            // 首个视频保持原生态：先录元素基准；翻页到第二个视频（cleanAllowed）后才清爽
-            if (!cleanAllowed) {
-                if (!baselineCaptured) {
-                    mainHandler.removeCallbacks(baselineRunnable)
-                    mainHandler.postDelayed(baselineRunnable, 120L)
-                }
-                return
-            }
             val transition = !overlaysHidden
             overlaysHidden = true
             // 只在进入隐藏的瞬间清零留白（避免抖音重置后我们反复清零造成抖动）
@@ -490,13 +399,7 @@ object CleanModeHooker : YukiBaseHooker() {
         adjustBottomPlainSpacer(decorView, hidden)
         adjustPagerAncestors(decorView, classLoader, hidden)
         adjustPagerHeight(decorView, classLoader, hidden)
-        // 暂停恢复时按“首视频录制基准”还原页内悬浮控件；播放隐藏时复位
-        applyPauseLift(decorView, classLoader, show = !hidden)
-        if (hidden && log) {
-            // 试探：进入清爽后主动重排一次主页容器，等效切后台/暂停再继续，看能否去掉底部圆角残留
-            mainHandler.removeCallbacks(roundingRefreshRunnable)
-            mainHandler.postDelayed(roundingRefreshRunnable, 250L)
-        }
+        // 不做逐元素位移：暂停时由 adjustPagerHeight 还原整页原生布局，页内元素自然回原生位置
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
         }
@@ -646,11 +549,11 @@ object CleanModeHooker : YukiBaseHooker() {
         immersiveDecorRef = WeakReference(decorView)
     }
 
-    /** feed 面板顶/底留白清零（视频铺满），清爽开启期间保持 */
+    /** feed 面板顶部留白清零（视频铺满顶部）；底部留白保持原生，供暂停还原 pager 布局 */
     private fun zeroPanelSpaces() {
         val panel = panelRef?.get() ?: return
         val panelClass = panel.javaClass
-        listOf("mTopSpace", "mBottomSpace").forEach { fieldName ->
+        listOf("mTopSpace").forEach { fieldName ->
             val field = runCatching {
                 panelClass.getField(fieldName)
             }.getOrNull() ?: return@forEach
@@ -904,15 +807,15 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     /**
-     * 清爽隐藏时把翻页器(RTViewPager)撑到全屏；清爽开启期间保持，不随暂停恢复。
+     * 清爽隐藏(play)时把翻页器(RTViewPager)撑到全屏；暂停(show)时还原抖音原生布局。
      *
-     * 逆向结论（抖音 38.8.0 feed 布局 wk6/wk7.xml）：RTViewPager 在父容器
-     * DisallowInterceptRelativeLayout 里被 layout_above 锚在底部 BottomSpace 之上；
-     * BottomSpace（com.ss.android.ugc.aweme.feed.ui.bottom.BottomSpace）运行时高约
-     * 196px（为底栏预留的不可见占位），所以父容器虽然全高 3168，pager 却只有 2972。
-     * 只改 lp.height 不够（above 锚定会把 pager 底边钉在 BottomSpace 顶部），
-     * 这里同时移除 above/below 锚定并显式给全高。
-     * 暂停时对页内悬浮控件的位置还原见 applyPauseLift（按首个视频录制基准还原，v7.12+）。
+     * 逆向结论（38.8.0 feed 布局 wk6/wk7.xml）：RTViewPager 在 DisallowInterceptRelativeLayout
+     * 里被 layout_above 锚在底部 BottomSpace 之上（BottomSpace 运行时约 196px，为底栏预留的
+     * 不可见占位），所以父容器虽然全高 3168，pager 却只有 2972。
+     * - 播放（隐藏底栏）：移除 above/below 锚定并显式给全高 → 视频铺满到屏幕底；
+     * - 暂停（恢复底栏）：还原锚定与原生高度 → 页内作者/描述/右侧列/唱片回到抖音原生位置。
+     * v7.14 起废弃“逐元素位移/首视频基准”方案（与抖音布局打架导致暂停无限重排），
+     * 改回整页原生还原；BottomSpace 高度不再清零（见 zeroPanelSpaces）使还原真正生效。
      */
     private fun adjustPagerHeight(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
         val pagers = ArrayList<View>()
@@ -922,160 +825,87 @@ object CleanModeHooker : YukiBaseHooker() {
         }
         val screenH = decorView.bottom - decorView.top
         pagers.forEach { pager ->
-            if (!hidden) {
-                return@forEach
-            }
             val key = System.identityHashCode(pager)
             val lp = pager.layoutParams ?: return@forEach
             val rlp = lp as? RelativeLayout.LayoutParams
-            val original = pagerOriginalHeight[key] ?: lp.height
-            pagerOriginalHeight[key] = original
-            var layoutChanged = false
-            var anchors = ""
-            if (rlp != null) {
-                val above = rlp.getRule(RelativeLayout.ABOVE)
-                val below = rlp.getRule(RelativeLayout.BELOW)
-                if (above != 0) {
-                    rlp.removeRule(RelativeLayout.ABOVE)
-                    anchors += "above=0x${above.toString(16)} "
+            if (hidden) {
+                if (!pagerFullscreenApplied.contains(key)) {
+                    pagerOriginalHeight[key] = lp.height
+                    pagerOriginalRuleAbove[key] = rlp?.getRule(RelativeLayout.ABOVE) ?: 0
+                    pagerOriginalRuleBelow[key] = rlp?.getRule(RelativeLayout.BELOW) ?: 0
+                }
+                var layoutChanged = false
+                var anchors = ""
+                if (rlp != null) {
+                    val above = rlp.getRule(RelativeLayout.ABOVE)
+                    val below = rlp.getRule(RelativeLayout.BELOW)
+                    if (above != 0) {
+                        rlp.removeRule(RelativeLayout.ABOVE)
+                        anchors += "above=0x${above.toString(16)} "
+                        layoutChanged = true
+                    }
+                    if (below != 0) {
+                        rlp.removeRule(RelativeLayout.BELOW)
+                        anchors += "below=0x${below.toString(16)}"
+                        layoutChanged = true
+                    }
+                } else if (verbose) {
+                    YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
+                }
+                if (lp.height != screenH) {
+                    lp.height = screenH
                     layoutChanged = true
                 }
-                if (below != 0) {
-                    rlp.removeRule(RelativeLayout.BELOW)
-                    anchors += "below=0x${below.toString(16)}"
-                    layoutChanged = true
+                if (layoutChanged) {
+                    pager.layoutParams = lp
                 }
-            } else if (verbose) {
-                YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
-            }
-            if (lp.height != screenH) {
-                lp.height = screenH
-                layoutChanged = true
-            }
-            if (layoutChanged) {
-                pager.layoutParams = lp
-            }
-            val laidOutHeight = pager.bottom - pager.top
-            val alreadyFull = laidOutHeight >= screenH - 2
-            if (alreadyFull) {
-                pagerFullscreenApplied.add(key)
-            } else if (!pagerFullscreenApplied.contains(key) && (layoutChanged || laidOutHeight > 0)) {
-                // 首次修改主动重排；若实际仍未长到全高（MeasureOnce 优化可能跳过重测）则补一次
-                pager.requestLayout()
-                (pager.parent as? View)?.requestLayout()
-                if (verbose) {
-                    YLog.debug("$TAG: RTViewPager full -> $screenH (orig $original, anchors ${anchors.ifEmpty { "none" }})")
+                val laidOutHeight = pager.bottom - pager.top
+                val alreadyFull = laidOutHeight >= screenH - 2
+                if (alreadyFull) {
+                    pagerFullscreenApplied.add(key)
+                } else if (!pagerFullscreenApplied.contains(key) && (layoutChanged || laidOutHeight > 0)) {
+                    // 首次修改主动重排；若实际仍未长到全高（MeasureOnce 优化可能跳过重测）则补一次
+                    pager.requestLayout()
+                    (pager.parent as? View)?.requestLayout()
+                    if (verbose) {
+                        YLog.debug(
+                            "$TAG: RTViewPager full -> $screenH (orig ${pagerOriginalHeight[key]}, anchors ${anchors.ifEmpty {
+                                "none"
+                            }})"
+                        )
+                    }
+                }
+            } else {
+                // 暂停：还原原生 pager（锚定 + 原高度），页内元素回原生位置，不再逐元素位移
+                if (pagerFullscreenApplied.remove(key)) {
+                    val originalHeight = pagerOriginalHeight.remove(key)
+                    if (rlp != null) {
+                        val above = pagerOriginalRuleAbove.remove(key) ?: 0
+                        val below = pagerOriginalRuleBelow.remove(key) ?: 0
+                        if (above != 0) {
+                            rlp.addRule(RelativeLayout.ABOVE, above)
+                        }
+                        if (below != 0) {
+                            rlp.addRule(RelativeLayout.BELOW, below)
+                        }
+                    } else {
+                        pagerOriginalRuleAbove.remove(key)
+                        pagerOriginalRuleBelow.remove(key)
+                    }
+                    if (originalHeight != null && lp.height != originalHeight) {
+                        lp.height = originalHeight
+                    }
+                    pager.layoutParams = lp
+                    pager.requestLayout()
+                    (pager.parent as? View)?.requestLayout()
+                    if (verbose) {
+                        YLog.debug("$TAG: RTViewPager restored native (height=$originalHeight)")
+                    }
                 }
             }
         }
     }
 
-    /**
-     * 暂停恢复（show=true）：把页内悬浮控件还原到“首个视频原生态”录制的底边位置，
-     * translationY = baselineBottom - 当前布局底边（负值=上移）；播放隐藏（false）时复位。
-     * 每次暂停都按当前布局实时计算，配合补打抗抖音动画/晚渲染复位。
-     */
-    private fun applyPauseLift(decorView: View, classLoader: ClassLoader, show: Boolean) {
-        val screenH = decorView.bottom - decorView.top
-        if (!show) {
-            val targets = ArrayList<View>()
-            pauseLiftClassNames.forEach { className -> collectByClassName(decorView, classLoader, className, targets) }
-            targets.forEach { view ->
-                val original = pauseLiftedViews.remove(System.identityHashCode(view))
-                if (original != null && view.translationY != original) {
-                    view.translationY = original
-                }
-            }
-            return
-        }
-        if (!baselineCaptured || !cleanAllowed) {
-            return
-        }
-        var appliedAny = false
-        pauseLiftClassNames.forEach { className ->
-            val baselineBottom = baselineBottomByClass[className] ?: return@forEach
-            val inst = findOnScreenInstance(decorView, classLoader, className, screenH) ?: return@forEach
-            val loc = IntArray(2)
-            inst.getLocationInWindow(loc)
-            val currentBottom = loc[1] + inst.height
-            val target = (baselineBottom - currentBottom).toFloat()
-            val key = System.identityHashCode(inst)
-            if (!pauseLiftedViews.containsKey(key)) {
-                pauseLiftedViews[key] = inst.translationY
-            }
-            if (inst.translationY != target) {
-                inst.translationY = target
-                appliedAny = true
-                if (verbose) {
-                    YLog.debug(
-                        "$TAG: pause restore ${inst.javaClass.simpleName} base=$baselineBottom cur=$currentBottom " +
-                            "shift=${target.toInt()}px h=${inst.height}"
-                    )
-                }
-            }
-        }
-        if (appliedAny) {
-            mainHandler.removeCallbacks(pauseReassertRunnable)
-            mainHandler.postDelayed(pauseReassertRunnable, 400L)
-            mainHandler.postDelayed(pauseReassertRunnable, 1000L)
-        }
-    }
-
-    /** 首个视频（原生、底栏可见）时录制各元素屏内实例的窗口底边，供暂停还原 */
-    private fun tryCaptureBaseline(): Boolean {
-        val activity = mainActivityRef?.get() ?: return false
-        val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return false
-        val decor = activity.window?.decorView ?: return false
-        val screenH = decor.bottom - decor.top
-        if (screenH <= 0) {
-            return false
-        }
-        // 底栏可见才认为处于原生态（底栏隐藏说明已是清爽态，不在此录）
-        val bars = ArrayList<View>()
-        collectByClassName(decor, loader, "com.ss.android.ugc.aweme.homepage.ui.bottombar.MainBottomTabContainer", bars)
-        if (bars.none { it.visibility == View.VISIBLE && it.bottom > it.top }) {
-            return false
-        }
-        var allOk = true
-        pauseLiftClassNames.forEach { className ->
-            if (!baselineBottomByClass.containsKey(className)) {
-                val inst = findOnScreenInstance(decor, loader, className, screenH)
-                if (inst == null) {
-                    allOk = false
-                    return@forEach
-                }
-                val loc = IntArray(2)
-                inst.getLocationInWindow(loc)
-                baselineBottomByClass[className] = loc[1] + inst.height
-                if (verbose) {
-                    YLog.debug("$TAG: baseline ${inst.javaClass.simpleName} bottom=${loc[1] + inst.height} h=${inst.height}")
-                }
-            }
-        }
-        if (allOk && verbose) {
-            YLog.debug("$TAG: baseline captured on first video (native): $baselineBottomByClass")
-        }
-        return allOk
-    }
-
-    /** 取某类当前落在可视窗口内的第一个实例 */
-    private fun findOnScreenInstance(decorView: View, classLoader: ClassLoader, className: String, screenH: Int): View? {
-        val list = ArrayList<View>()
-        collectByClassName(decorView, classLoader, className, list)
-        return list.firstOrNull { v ->
-            if (v.visibility != View.VISIBLE || v.height <= 0) {
-                return@firstOrNull false
-            }
-            val loc = IntArray(2)
-            v.getLocationInWindow(loc)
-            loc[1] in 0 until screenH
-        }
-    }
-
-    /**
-     * 打印可能造成“视频圆角”的视图：clipToOutline=true 或 outlineProvider 非默认、且落在
-     * 可视窗口内的视图（抖音用 outline 圆角裁剪视频区域，清爽全屏后应去掉却残留）。
-     */
     private fun readClipToOutline(view: View): Boolean =
         runCatching { view.javaClass.getMethod("isClipToOutline").invoke(view) as? Boolean }.getOrNull() ?: false
 
