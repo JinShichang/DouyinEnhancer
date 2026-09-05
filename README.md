@@ -40,6 +40,10 @@ A small Xposed module that adds quality-of-life features to Douyin
 ---
 See more about future development: [PM.md](PM.md)
 
+## Known Issues
+
+- Known BUG: the first video shows a rounded-corner remnant at the bottom of the screen; pausing and resuming the video removes it. This BUG has proven very hard to fix and is harmless enough to live with. （已知 BUG：首个视频屏幕底部会有圆角残留，暂停并继续视频可消除圆角，此 BUG 实在无力修复，无伤大雅将就用吧。）
+
 ## Usage
 
 1. Activate the module in your Xposed manager (e.g. LSPosed)
