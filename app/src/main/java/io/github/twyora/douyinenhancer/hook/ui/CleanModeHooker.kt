@@ -125,6 +125,16 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已成功把翻页器撑到全屏的实例（清爽期间保持，不随暂停恢复）
     private val pagerFullscreenApplied = HashSet<Int>()
 
+    // 暂停时因视频全屏会被底栏盖住的左下文案/音乐视图（记录原 translationY 以便复位）
+    private val liftedBottomText = HashMap<Int, Float>()
+
+    private val bottomTextClassNames = listOf(
+        "com.ss.android.ugc.aweme.feed.ui.AwemeIntroInfoLayout",
+        "com.ss.android.ugc.aweme.feed.widget.MarqueeView",
+        "com.ss.android.ugc.aweme.feed.widget.feedbottommusicanchor.FeedBottomMusicAnchorLayout",
+        "com.ss.android.ugc.aweme.feed.ui.musiccover.MusicCoverContainerLayout"
+    )
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -154,7 +164,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.7 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.8 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -247,9 +257,9 @@ object CleanModeHooker : YukiBaseHooker() {
                     if (method.name == "onPageScrollStateChanged") {
                         val state = args[0] as? Int ?: return@after
                         pagerDragging = state != 0
-                        if (state == 0) {
-                            applyOverlayMode(hidden = true)
-                        }
+                        // 任何翻页状态都补扫隐藏：切页时抖音会短暂重新显示新页控件，
+                        // 只在 state==0 时处理会漏（且原实现同态直接 return，导致残留到下次事件）
+                        applyOverlayMode(hidden = true)
                     } else {
                         applyOverlayMode(hidden = true)
                     }
@@ -342,19 +352,25 @@ object CleanModeHooker : YukiBaseHooker() {
         if (!hidden && pagerDragging) {
             return
         }
-        if (hidden == overlaysHidden) {
-            return
-        }
-        overlaysHidden = hidden
-        // 只在进入隐藏的瞬间清零留白（避免抖音重置后我们反复清零造成抖动）
-        applyOverlayVisibility(hidden, log = true, zeroSpaces = hidden)
-        mainHandler.removeCallbacks(rehideRunnable)
         if (hidden) {
-            mainHandler.postDelayed(rehideRunnable, 800L)
-            mainHandler.postDelayed(rehideRunnable, 2500L)
-            if (verbose) {
+            val transition = !overlaysHidden
+            overlaysHidden = true
+            // 只在进入隐藏的瞬间清零留白（避免抖音重置后我们反复清零造成抖动）
+            applyOverlayVisibility(hidden = true, log = transition, zeroSpaces = transition)
+            // 隐藏后做几次短间隔补扫，兜住切页/重渲染后新冒出的控件
+            mainHandler.removeCallbacks(rehideRunnable)
+            mainHandler.postDelayed(rehideRunnable, 200L)
+            mainHandler.postDelayed(rehideRunnable, 700L)
+            mainHandler.postDelayed(rehideRunnable, 1800L)
+            if (transition && verbose) {
                 dumpLayoutStructure()
             }
+        } else {
+            if (!overlaysHidden) {
+                return
+            }
+            overlaysHidden = false
+            applyOverlayVisibility(hidden = false, log = true, zeroSpaces = false)
         }
     }
 
@@ -390,8 +406,145 @@ object CleanModeHooker : YukiBaseHooker() {
         adjustBottomPlainSpacer(decorView, hidden)
         adjustPagerAncestors(decorView, classLoader, hidden)
         adjustPagerHeight(decorView, classLoader, hidden)
+        // 暂停恢复时若左下文案/音乐区会被底栏盖住则上移避让；播放隐藏时复位
+        adjustBottomTextAboveBar(decorView, classLoader, show = !hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
+        }
+        // 隐藏后仍可见的右列/底部疑似悬浮控件（合集等页面可能漏网），verbose 时打印类名
+        if (hidden && verbose) {
+            dumpLeftoverOverlays(activity)
+        }
+    }
+
+    /**
+     * 暂停恢复（show=true）时，把会被底栏盖住的左下文案/音乐区上移到底栏之上；
+     * 播放隐藏（show=false）时复位。仅当底栏实例存在且可见时计算。
+     */
+    private fun adjustBottomTextAboveBar(decorView: View, classLoader: ClassLoader, show: Boolean) {
+        val lifted = ArrayList<View>()
+        bottomTextClassNames.forEach { className ->
+            collectByClassName(decorView, classLoader, className, lifted)
+        }
+        if (!show) {
+            lifted.forEach { view ->
+                val original = liftedBottomText.remove(System.identityHashCode(view))
+                if (original != null && view.translationY != original) {
+                    view.translationY = original
+                }
+            }
+            return
+        }
+        // 找当前可见的底栏，取其顶边作为文案不应越过的界线
+        val bars = ArrayList<View>()
+        collectByClassName(
+            decorView,
+            classLoader,
+            "com.ss.android.ugc.aweme.homepage.ui.bottombar.MainBottomTabContainer",
+            bars
+        )
+        val bar = bars.firstOrNull { it.visibility == View.VISIBLE && it.bottom > it.top } ?: return
+        val barLoc = IntArray(2)
+        bar.getLocationInWindow(barLoc)
+        val barTop = barLoc[1]
+        lifted.forEach { view ->
+            if (view.visibility != View.VISIBLE || view.height <= 0) {
+                return@forEach
+            }
+            val loc = IntArray(2)
+            view.getLocationInWindow(loc)
+            val bottomY = loc[1] + view.height
+            if (bottomY > barTop + 4) {
+                val lift = barTop - bottomY - 12f
+                if (lift < 0) {
+                    val key = System.identityHashCode(view)
+                    if (!liftedBottomText.containsKey(key)) {
+                        liftedBottomText[key] = view.translationY
+                    }
+                    if (view.translationY != lift) {
+                        view.translationY = lift
+                        if (verbose) {
+                            YLog.debug("$TAG: lift ${view.javaClass.simpleName} up ${-lift.toInt()}px to clear bottom bar (barTop=$barTop)")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 打印隐藏后仍可见的“疑似悬浮控件”（右列/底部区域、非通用布局、非弹幕/进度条），
+     * 附最近的非通用祖先类名，用于定位合集等页面漏网的控件容器。
+     */
+    private fun dumpLeftoverOverlays(activity: Activity) {
+        val decor = activity.window?.decorView ?: return
+        val screenW = decor.right - decor.left
+        val screenH = decor.bottom - decor.top
+        val found = ArrayList<View>()
+        val counter = intArrayOf(0)
+        fun walk(view: View, depth: Int) {
+            if (depth > 14 || counter[0] > 4000) {
+                return
+            }
+            counter[0]++
+            if (view.visibility == View.VISIBLE && view.width > 0 && view.height > 0) {
+                val loc = IntArray(2)
+                view.getLocationInWindow(loc)
+                val rightBand = loc[0] >= screenW - 220
+                val bottomBand = loc[1] >= screenH - 560
+                if (rightBand || bottomBand) {
+                    val name = view.javaClass.name
+                    val isGeneric = name.startsWith("android.widget.FrameLayout") ||
+                        name.startsWith("android.widget.RelativeLayout") ||
+                        name.startsWith("android.widget.LinearLayout") ||
+                        name.startsWith("android.widget.HorizontalScrollView") ||
+                        name.startsWith("android.widget.ScrollView") ||
+                        name == "android.view.View" || name.startsWith("android.view.ViewGroup") ||
+                        name.startsWith("X.") || name.endsWith("ViewStub") || name.endsWith("ViewGroup")
+                    val isKeep = name.contains("DanmakuView") || name.contains("SeekBar") ||
+                        name.contains("VerticalViewPager") || name.contains("RTViewPager") ||
+                        name.contains("SurfaceView") || name.contains("TextureView")
+                    if (!isGeneric && !isKeep && found.size < 60) {
+                        found.add(view)
+                    }
+                }
+            }
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    walk(view.getChildAt(i), depth + 1)
+                }
+            }
+        }
+        walk(decor, 0)
+        if (found.isEmpty()) {
+            return
+        }
+        YLog.debug("$TAG: leftover visible overlays in right/bottom bands (${found.size})")
+        found.forEach { view ->
+            val loc = IntArray(2)
+            view.getLocationInWindow(loc)
+            val idText = if (view.id != View.NO_ID) "id=0x${view.id.toString(16)}" else "id=no"
+            val ancestors = StringBuilder()
+            var parent = view.parent
+            var d = 0
+            while (parent is ViewGroup && d < 5) {
+                val pName = parent.javaClass.name
+                ancestors.append(
+                    if (pName.contains("aweme") ||
+                        pName.contains("bytedance")
+                    ) {
+                        pName
+                    } else {
+                        pName.substringAfterLast('.')
+                    }
+                ).append(" > ")
+                parent = parent.parent
+                d++
+            }
+            YLog.debug(
+                "$TAG:   [leftover] ${view.javaClass.name} top=${loc[1]} bottom=${loc[1] + view.height} " +
+                    "x=${loc[0]} w=${view.width} $idText ancestors=$ancestors"
+            )
         }
     }
 
