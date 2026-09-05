@@ -161,7 +161,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.15 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.16 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -362,9 +362,10 @@ object CleanModeHooker : YukiBaseHooker() {
                 dumpLayoutStructure()
             }
             if (transition && !roundingRoundTripDone) {
-                // 一次性“原生↔全屏”尺寸往返：等效暂停再继续，尝试消掉首次进入时的底部圆角
+                // 一次性“底栏 显示→隐藏”切换：抖音按底栏可见性决定视频是否画圆角；
+                // 等效暂停再继续对底栏的那次真实切换，把内部状态翻成“底栏已隐藏=方角”
                 roundingRoundTripDone = true
-                mainHandler.postDelayed({ doPagerRoundTrip() }, 700L)
+                mainHandler.postDelayed({ doFirstEntryRoundTrip() }, 2000L)
             }
         } else {
             if (!overlaysHidden) {
@@ -943,48 +944,33 @@ object CleanModeHooker : YukiBaseHooker() {
         }, 350L)
     }
 
-    /** 冷启动后一次性 pager 尺寸往返（3168→原生→3168），尝试去掉首次进入清爽时的底部圆角残留 */
-    private fun doPagerRoundTrip() {
+    /**
+     * 首次进入清爽约 2s 后，把主页底栏做一次“显示 250ms → 隐藏”：
+     * 抖音根据底栏可见性决定 feed 视频底部是否圆角（底栏可见=圆角，隐藏=方角），
+     * 手动 GONE 不触发它的状态切换，只有真实可见性变化才生效（用户“暂停再继续”能消
+     * 圆角即因底栏经历了一次显示→隐藏）。此处仅切底栏，不闪其它控件。
+     */
+    private fun doFirstEntryRoundTrip() {
         val activity = mainActivityRef?.get() ?: return
         val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return
         val decor = activity.window?.decorView ?: return
-        val pagers = ArrayList<View>()
-        collectByClassName(decor, loader, "com.ss.android.ugc.aweme.common.widget.VerticalViewPager", pagers)
-        val pager = pagers.firstOrNull() ?: return
-        val screenH = decor.bottom - decor.top
-        val key = System.identityHashCode(pager)
-        val lp = pager.layoutParams ?: return
-        val rlp = lp as? RelativeLayout.LayoutParams ?: return
-        val above = pagerOriginalRuleAbove[key] ?: rlp.getRule(RelativeLayout.ABOVE)
-        val below = pagerOriginalRuleBelow[key] ?: rlp.getRule(RelativeLayout.BELOW)
-        if (above != 0) {
-            rlp.addRule(RelativeLayout.ABOVE, above)
-        }
-        if (below != 0) {
-            rlp.addRule(RelativeLayout.BELOW, below)
-        }
-        lp.height = ViewGroup.LayoutParams.MATCH_PARENT
-        pager.layoutParams = lp
-        pager.requestLayout()
-        (pager.parent as? View)?.requestLayout()
-        if (verbose) {
-            YLog.debug("$TAG: rounding round-trip -> native")
+        val bars = ArrayList<View>()
+        collectByClassName(decor, loader, "com.ss.android.ugc.aweme.homepage.ui.bottombar.MainBottomTabContainer", bars)
+        val bar = bars.firstOrNull { it.visibility != View.VISIBLE && it.bottom > it.top }
+            ?: bars.firstOrNull { it.bottom > it.top }
+            ?: return
+        if (bar.visibility != View.VISIBLE) {
+            bar.visibility = View.VISIBLE
+            if (verbose) {
+                YLog.debug("$TAG: first-entry round trip: bottom bar shown")
+            }
         }
         mainHandler.postDelayed({
-            val rlp2 = pager.layoutParams as? RelativeLayout.LayoutParams
-            if (rlp2 != null) {
-                rlp2.removeRule(RelativeLayout.ABOVE)
-                rlp2.removeRule(RelativeLayout.BELOW)
-            }
-            val lp2 = pager.layoutParams ?: return@postDelayed
-            lp2.height = screenH
-            pager.layoutParams = lp2
-            pager.requestLayout()
-            (pager.parent as? View)?.requestLayout()
+            bar.visibility = View.GONE
             if (verbose) {
-                YLog.debug("$TAG: rounding round-trip -> fullscreen")
+                YLog.debug("$TAG: first-entry round trip: bottom bar hidden (rounding state refreshed)")
             }
-        }, 220L)
+        }, 250L)
     }
 
     private fun describeLp(lp: ViewGroup.LayoutParams?): String {
