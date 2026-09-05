@@ -125,9 +125,15 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已由我们改成“全屏”的翻页器实例（暂停时据此还原；记录即改，避免快速暂停/继续的竞态）
     private val pagerFullscreenChanged = HashSet<Int>()
 
-    // RTViewPager 原始 layout_above/below 锚定 id（暂停时还原抖音原生布局用）
+    // RTViewPager 原始 layout_above/below 锚定 id（备用）
     private val pagerOriginalRuleAbove = HashMap<Int, Int>()
     private val pagerOriginalRuleBelow = HashMap<Int, Int>()
+
+    // 首次进入清爽时录制的 pager 原生高度（暂停时显式设回，不依赖 BottomSpace 锚定）
+    private var nativePagerHeight = 0
+
+    // 是否已做过一次“底栏 显示→隐藏”让抖音按 BottomSpace=0 重新评估（清圆角）
+    private var firstEntryBarFlipDone = false
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
@@ -158,7 +164,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.19 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.20 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -357,6 +363,12 @@ object CleanModeHooker : YukiBaseHooker() {
             mainHandler.postDelayed(rehideRunnable, 1800L)
             if (transition && verbose) {
                 dumpLayoutStructure()
+            }
+            if (transition && !firstEntryBarFlipDone) {
+                // BottomSpace 已清零；再让底栏经历一次真实 显示→隐藏，抖音便会按
+                // “无底栏占位=全屏”重新评估 → 视频方角（等效手动暂停再继续，自动执行）
+                firstEntryBarFlipDone = true
+                mainHandler.postDelayed({ doFirstEntryBarFlip() }, 2000L)
             }
         } else {
             if (!overlaysHidden) {
@@ -807,11 +819,10 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     /**
-     * 清爽隐藏(play)时把翻页器(RTViewPager)撑到全屏并保持；暂停不再还原。
-     *
-     * 对照版 v7.18：仅验证“暂停时 pager 是否缩回原生”与“暂停→继续能否消圆角”的关系
-     * （≤7.13 暂停保持全屏时可消；7.14 起暂停缩回原生后不可消）。
-     * 已知回退：本版暂停时作者/描述可能回到被底栏挡的位置，仅为隔离圆角变量，测完即撤。
+     * 清爽隐藏(play)：翻页器去锚定 + 全高 → 视频铺满全屏；
+     * 暂停(show)：把 pager 显式设回“首次录制原生高度”（不依赖 BottomSpace 锚定，
+     * 因为 BottomSpace 已清零用于让抖音判定为方角），页内作者/描述/右侧列/唱片
+     * 回到原生位置、不被底栏盖。播放/暂停都不再改 BottomSpace。
      */
     private fun adjustPagerHeight(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
         val pagers = ArrayList<View>()
@@ -821,56 +832,92 @@ object CleanModeHooker : YukiBaseHooker() {
         }
         val screenH = decorView.bottom - decorView.top
         pagers.forEach { pager ->
-            if (!hidden) {
-                return@forEach
-            }
             val key = System.identityHashCode(pager)
             val lp = pager.layoutParams ?: return@forEach
             val rlp = lp as? RelativeLayout.LayoutParams
-            if (!pagerFullscreenChanged.contains(key)) {
-                pagerOriginalHeight[key] = lp.height
-                pagerOriginalRuleAbove[key] = rlp?.getRule(RelativeLayout.ABOVE) ?: 0
-                pagerOriginalRuleBelow[key] = rlp?.getRule(RelativeLayout.BELOW) ?: 0
-                pagerFullscreenChanged.add(key)
-            }
-            var layoutChanged = false
-            var anchors = ""
-            if (rlp != null) {
-                val above = rlp.getRule(RelativeLayout.ABOVE)
-                val below = rlp.getRule(RelativeLayout.BELOW)
-                if (above != 0) {
-                    rlp.removeRule(RelativeLayout.ABOVE)
-                    anchors += "above=0x${above.toString(16)} "
+            if (hidden) {
+                if (!pagerFullscreenChanged.contains(key)) {
+                    if (nativePagerHeight <= 0) {
+                        val preH = pager.bottom - pager.top
+                        if (preH > 0) {
+                            nativePagerHeight = preH
+                        }
+                    }
+                    pagerOriginalHeight[key] = lp.height
+                    pagerOriginalRuleAbove[key] = rlp?.getRule(RelativeLayout.ABOVE) ?: 0
+                    pagerOriginalRuleBelow[key] = rlp?.getRule(RelativeLayout.BELOW) ?: 0
+                    pagerFullscreenChanged.add(key)
+                }
+                var layoutChanged = false
+                var anchors = ""
+                if (rlp != null) {
+                    val above = rlp.getRule(RelativeLayout.ABOVE)
+                    val below = rlp.getRule(RelativeLayout.BELOW)
+                    if (above != 0) {
+                        rlp.removeRule(RelativeLayout.ABOVE)
+                        anchors += "above=0x${above.toString(16)} "
+                        layoutChanged = true
+                    }
+                    if (below != 0) {
+                        rlp.removeRule(RelativeLayout.BELOW)
+                        anchors += "below=0x${below.toString(16)}"
+                        layoutChanged = true
+                    }
+                } else if (verbose) {
+                    YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
+                }
+                if (lp.height != screenH) {
+                    lp.height = screenH
                     layoutChanged = true
                 }
-                if (below != 0) {
-                    rlp.removeRule(RelativeLayout.BELOW)
-                    anchors += "below=0x${below.toString(16)}"
-                    layoutChanged = true
+                if (layoutChanged) {
+                    pager.layoutParams = lp
                 }
-            } else if (verbose) {
-                YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
-            }
-            if (lp.height != screenH) {
-                lp.height = screenH
-                layoutChanged = true
-            }
-            if (layoutChanged) {
-                pager.layoutParams = lp
-            }
-            val laidOutHeight = pager.bottom - pager.top
-            if (pagerFullscreenChanged.contains(key) && laidOutHeight < screenH - 2) {
-                pager.requestLayout()
-                (pager.parent as? View)?.requestLayout()
-                if (verbose) {
-                    YLog.debug(
-                        "$TAG: RTViewPager full -> $screenH (orig ${pagerOriginalHeight[key]}, anchors ${anchors.ifEmpty {
-                            "none"
-                        }})"
-                    )
+                val laidOutHeight = pager.bottom - pager.top
+                if (pagerFullscreenChanged.contains(key) && laidOutHeight < screenH - 2) {
+                    pager.requestLayout()
+                    (pager.parent as? View)?.requestLayout()
+                    if (verbose) {
+                        YLog.debug(
+                            "$TAG: RTViewPager full -> $screenH (orig ${pagerOriginalHeight[key]}, anchors ${anchors.ifEmpty {
+                                "none"
+                            }})"
+                        )
+                    }
+                }
+            } else {
+                // 暂停：显式缩回原生高度（不依赖 BottomSpace 锚定）
+                if (pagerFullscreenChanged.contains(key) && nativePagerHeight > 0 && lp.height != nativePagerHeight) {
+                    lp.height = nativePagerHeight
+                    pager.layoutParams = lp
+                    pager.requestLayout()
+                    (pager.parent as? View)?.requestLayout()
+                    if (verbose) {
+                        YLog.debug("$TAG: RTViewPager pause -> native explicit h=$nativePagerHeight")
+                    }
                 }
             }
         }
+    }
+
+    /** 首次进入清爽约 2s：底栏 显示→隐藏 一次，让抖音按 BottomSpace=0 重估 → 视频方角 */
+    private fun doFirstEntryBarFlip() {
+        val activity = mainActivityRef?.get() ?: return
+        val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return
+        val decor = activity.window?.decorView ?: return
+        val bars = ArrayList<View>()
+        collectByClassName(decor, loader, "com.ss.android.ugc.aweme.homepage.ui.bottombar.MainBottomTabContainer", bars)
+        val bar = bars.firstOrNull() ?: return
+        bar.visibility = View.VISIBLE
+        if (verbose) {
+            YLog.debug("$TAG: first-entry bar flip -> shown")
+        }
+        mainHandler.postDelayed({
+            bar.visibility = View.GONE
+            if (verbose) {
+                YLog.debug("$TAG: first-entry bar flip -> hidden (rounding eval refresh)")
+            }
+        }, 300L)
     }
 
     private fun describeLp(lp: ViewGroup.LayoutParams?): String {
