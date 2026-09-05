@@ -125,9 +125,14 @@ object CleanModeHooker : YukiBaseHooker() {
     // 已成功把翻页器撑到全屏的实例（清爽期间保持，不随暂停恢复）
     private val pagerFullscreenApplied = HashSet<Int>()
 
-    // RTViewPager 原始 layout_above/below 锚定目标 id（暂停还原原生布局用）
-    private val pagerOriginalRuleAbove = HashMap<Int, Int>()
-    private val pagerOriginalRuleBelow = HashMap<Int, Int>()
+    // 暂停时把这些“页内悬浮控件”整体上移，补偿全屏翻页器下的下沉（用户实测约 100px 即可）
+    private val pauseLiftedViews = HashMap<Int, Float>()
+    private val pauseLiftClassNames = listOf(
+        "com.ss.android.ugc.aweme.feed.ui.AwemeIntroInfoLayout",
+        "com.ss.android.ugc.aweme.feed.ui.FeedRightScaleView",
+        "com.ss.android.ugc.aweme.feed.ui.musiccover.MusicCoverContainerLayout"
+    )
+    private const val PAUSE_LIFT_PX = 100f
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
@@ -158,7 +163,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.9 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.10 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -400,6 +405,8 @@ object CleanModeHooker : YukiBaseHooker() {
         adjustBottomPlainSpacer(decorView, hidden)
         adjustPagerAncestors(decorView, classLoader, hidden)
         adjustPagerHeight(decorView, classLoader, hidden)
+        // 暂停恢复时把页内悬浮控件整体上移避开底栏；播放隐藏时复位
+        applyPauseLift(decorView, classLoader, show = !hidden)
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
         }
@@ -806,15 +813,17 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     /**
-     * 清爽隐藏时把翻页器(RTViewPager)撑到全屏；暂停(show)时还原抖音原生布局。
+     * 清爽隐藏时把翻页器(RTViewPager)撑到全屏；清爽开启期间保持，不随暂停恢复。
      *
      * 逆向结论（抖音 38.8.0 feed 布局 wk6/wk7.xml）：RTViewPager 在父容器
      * DisallowInterceptRelativeLayout 里被 layout_above 锚在底部 BottomSpace 之上；
      * BottomSpace（com.ss.android.ugc.aweme.feed.ui.bottom.BottomSpace）运行时高约
      * 196px（为底栏预留的不可见占位），所以父容器虽然全高 3168，pager 却只有 2972。
-     * 播放（隐藏底栏）时移除 above/below 锚定并显式给全高 → 视频铺满到屏幕底；
-     * 暂停（恢复底栏）时把锚定与高度还原为原生值 → 页内作者/描述/弹幕入口等回到
-     * 底栏上方的原生位置，不会被底栏盖住，也不需要去猜坐标做位移。
+     * 只改 lp.height 不够（above 锚定会把 pager 底边钉在 BottomSpace 顶部），
+     * 这里同时移除 above/below 锚定并显式给全高。
+     * 注：曾尝试暂停时还原原生 pager（让页内文案回底栏上方），真机上 BottomSpace
+     * 高度已被清零等历史因素导致还原不彻底，元素仍偏低；改为暂停时把页内悬浮控件
+     * 整体上移 PAUSE_LIFT_PX（见 applyPauseLift），效果更可控。
      */
     private fun adjustPagerHeight(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
         val pagers = ArrayList<View>()
@@ -824,81 +833,83 @@ object CleanModeHooker : YukiBaseHooker() {
         }
         val screenH = decorView.bottom - decorView.top
         pagers.forEach { pager ->
+            if (!hidden) {
+                return@forEach
+            }
             val key = System.identityHashCode(pager)
             val lp = pager.layoutParams ?: return@forEach
             val rlp = lp as? RelativeLayout.LayoutParams
-            if (hidden) {
-                if (!pagerFullscreenApplied.contains(key)) {
-                    pagerOriginalHeight[key] = lp.height
-                    pagerOriginalRuleAbove[key] = rlp?.getRule(RelativeLayout.ABOVE) ?: 0
-                    pagerOriginalRuleBelow[key] = rlp?.getRule(RelativeLayout.BELOW) ?: 0
-                }
-                var layoutChanged = false
-                var anchors = ""
-                if (rlp != null) {
-                    val above = rlp.getRule(RelativeLayout.ABOVE)
-                    val below = rlp.getRule(RelativeLayout.BELOW)
-                    if (above != 0) {
-                        rlp.removeRule(RelativeLayout.ABOVE)
-                        anchors += "above=0x${above.toString(16)} "
-                        layoutChanged = true
-                    }
-                    if (below != 0) {
-                        rlp.removeRule(RelativeLayout.BELOW)
-                        anchors += "below=0x${below.toString(16)}"
-                        layoutChanged = true
-                    }
-                } else if (verbose && !pagerFullscreenApplied.contains(key)) {
-                    YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
-                }
-                if (lp.height != screenH) {
-                    lp.height = screenH
+            val original = pagerOriginalHeight[key] ?: lp.height
+            pagerOriginalHeight[key] = original
+            var layoutChanged = false
+            var anchors = ""
+            if (rlp != null) {
+                val above = rlp.getRule(RelativeLayout.ABOVE)
+                val below = rlp.getRule(RelativeLayout.BELOW)
+                if (above != 0) {
+                    rlp.removeRule(RelativeLayout.ABOVE)
+                    anchors += "above=0x${above.toString(16)} "
                     layoutChanged = true
                 }
-                if (layoutChanged) {
-                    pager.layoutParams = lp
+                if (below != 0) {
+                    rlp.removeRule(RelativeLayout.BELOW)
+                    anchors += "below=0x${below.toString(16)}"
+                    layoutChanged = true
                 }
-                val laidOutHeight = pager.bottom - pager.top
-                val alreadyFull = laidOutHeight >= screenH - 2
-                if (alreadyFull) {
-                    pagerFullscreenApplied.add(key)
-                } else if (!pagerFullscreenApplied.contains(key) && (layoutChanged || laidOutHeight > 0)) {
-                    // 首次修改主动重排；若实际仍未长到全高（MeasureOnce 优化可能跳过重测）则补一次
-                    pager.requestLayout()
-                    (pager.parent as? View)?.requestLayout()
-                    if (verbose) {
-                        YLog.debug(
-                            "$TAG: RTViewPager full -> $screenH (orig ${pagerOriginalHeight[key]}, anchors ${anchors.ifEmpty {
-                                "none"
-                            }})"
-                        )
-                    }
+            } else if (verbose) {
+                YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
+            }
+            if (lp.height != screenH) {
+                lp.height = screenH
+                layoutChanged = true
+            }
+            if (layoutChanged) {
+                pager.layoutParams = lp
+            }
+            val laidOutHeight = pager.bottom - pager.top
+            val alreadyFull = laidOutHeight >= screenH - 2
+            if (alreadyFull) {
+                pagerFullscreenApplied.add(key)
+            } else if (!pagerFullscreenApplied.contains(key) && (layoutChanged || laidOutHeight > 0)) {
+                // 首次修改主动重排；若实际仍未长到全高（MeasureOnce 优化可能跳过重测）则补一次
+                pager.requestLayout()
+                (pager.parent as? View)?.requestLayout()
+                if (verbose) {
+                    YLog.debug("$TAG: RTViewPager full -> $screenH (orig $original, anchors ${anchors.ifEmpty { "none" }})")
                 }
-            } else {
-                // 暂停：还原抖音原生 pager 尺寸/锚定，让页内文案回到底栏上方原生位置
-                if (pagerFullscreenApplied.remove(key)) {
-                    val originalHeight = pagerOriginalHeight.remove(key)
-                    if (rlp != null) {
-                        val above = pagerOriginalRuleAbove.remove(key) ?: 0
-                        val below = pagerOriginalRuleBelow.remove(key) ?: 0
-                        if (above != 0) {
-                            rlp.addRule(RelativeLayout.ABOVE, above)
-                        }
-                        if (below != 0) {
-                            rlp.addRule(RelativeLayout.BELOW, below)
-                        }
-                    } else {
-                        pagerOriginalRuleAbove.remove(key)
-                        pagerOriginalRuleBelow.remove(key)
-                    }
-                    if (originalHeight != null && lp.height != originalHeight) {
-                        lp.height = originalHeight
-                    }
-                    pager.layoutParams = lp
-                    pager.requestLayout()
-                    (pager.parent as? View)?.requestLayout()
+            }
+        }
+    }
+
+    /**
+     * 暂停恢复（show=true）时把页内悬浮控件（左下作者/描述、右侧竖列、音乐封面/旋转头像）
+     * 整体上移 PAUSE_LIFT_PX，避开底栏遮挡；播放隐藏（show=false）时复位。
+     * 不做坐标测量（翻页器假滚动下不可靠），用固定偏移，按用户实测校准。
+     */
+    private fun applyPauseLift(decorView: View, classLoader: ClassLoader, show: Boolean) {
+        val targets = ArrayList<View>()
+        pauseLiftClassNames.forEach { className ->
+            collectByClassName(decorView, classLoader, className, targets)
+        }
+        if (!show) {
+            targets.forEach { view ->
+                val original = pauseLiftedViews.remove(System.identityHashCode(view))
+                if (original != null && view.translationY != original) {
+                    view.translationY = original
+                }
+            }
+            return
+        }
+        targets.forEach { view ->
+            if (view.visibility == View.VISIBLE && view.height > 0) {
+                val key = System.identityHashCode(view)
+                if (!pauseLiftedViews.containsKey(key)) {
+                    pauseLiftedViews[key] = view.translationY
+                }
+                if (view.translationY != -PAUSE_LIFT_PX) {
+                    view.translationY = -PAUSE_LIFT_PX
                     if (verbose) {
-                        YLog.debug("$TAG: RTViewPager restored to native height=$originalHeight")
+                        YLog.debug("$TAG: pause lift ${view.javaClass.simpleName} up ${PAUSE_LIFT_PX.toInt()}px")
                     }
                 }
             }
