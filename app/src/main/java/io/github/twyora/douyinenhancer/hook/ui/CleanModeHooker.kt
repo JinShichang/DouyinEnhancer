@@ -158,7 +158,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.18 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.19 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -548,11 +548,12 @@ object CleanModeHooker : YukiBaseHooker() {
         immersiveDecorRef = WeakReference(decorView)
     }
 
-    /** feed 面板顶部留白清零（视频铺满顶部）；底部留白保持原生，供暂停还原 pager 布局 */
+    /** feed 面板顶/底留白清零：BottomSpace=0 时抖音把 feed 视为“全屏(无底栏)”→视频方角；
+     * 保留 BottomSpace 高度则一直按“首页带底栏”画圆角（v7.19 对照：恢复 v7.13 及以前的清零） */
     private fun zeroPanelSpaces() {
         val panel = panelRef?.get() ?: return
         val panelClass = panel.javaClass
-        listOf("mTopSpace").forEach { fieldName ->
+        listOf("mTopSpace", "mBottomSpace").forEach { fieldName ->
             val field = runCatching {
                 panelClass.getField(fieldName)
             }.getOrNull() ?: return@forEach
