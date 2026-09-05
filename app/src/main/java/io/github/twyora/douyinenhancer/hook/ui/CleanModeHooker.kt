@@ -134,6 +134,24 @@ object CleanModeHooker : YukiBaseHooker() {
     )
     private const val PAUSE_LIFT_PX = 100f
 
+    // 暂停上移的补打次数（抖音可能在暂停动画/晚渲染时把 translationY 复位，需隔段时间重打）
+    private var pauseLiftReassertCount = 0
+    private val pauseLiftReassertRunnable = object : Runnable {
+        override fun run() {
+            if (overlaysHidden) {
+                return
+            }
+            val activity = mainActivityRef?.get() ?: return
+            val loader = packageInstance.baseListFragmentPanel.selfClass?.classLoader ?: return
+            val decor = activity.window?.decorView ?: return
+            applyPauseLift(decor, loader, show = true)
+            if (pauseLiftReassertCount < 2) {
+                pauseLiftReassertCount++
+                mainHandler.postDelayed(this, 500L)
+            }
+        }
+    }
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -163,7 +181,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.10 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.11 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -407,12 +425,21 @@ object CleanModeHooker : YukiBaseHooker() {
         adjustPagerHeight(decorView, classLoader, hidden)
         // 暂停恢复时把页内悬浮控件整体上移避开底栏；播放隐藏时复位
         applyPauseLift(decorView, classLoader, show = !hidden)
+        if (!hidden) {
+            // 抖音暂停动画/晚渲染可能把我们的上移复位，隔段时间重打几次
+            mainHandler.removeCallbacks(pauseLiftReassertRunnable)
+            pauseLiftReassertCount = 0
+            mainHandler.postDelayed(pauseLiftReassertRunnable, 400L)
+        } else {
+            mainHandler.removeCallbacks(pauseLiftReassertRunnable)
+        }
         if (log || changed > 0) {
             YLog.debug("$TAG: overlays ${if (hidden) "hidden" else "shown"}, $changed views changed, ${overlayViews.size} total")
         }
         // 隐藏后仍可见的右列/底部疑似悬浮控件（合集等页面可能漏网），verbose 时打印类名
         if (hidden && verbose) {
             dumpLeftoverOverlays(activity)
+            dumpRoundedClipViews(activity)
         }
     }
 
@@ -900,19 +927,83 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
+        var liftedCount = 0
         targets.forEach { view ->
             if (view.visibility == View.VISIBLE && view.height > 0) {
+                val loc = IntArray(2)
+                view.getLocationInWindow(loc)
                 val key = System.identityHashCode(view)
                 if (!pauseLiftedViews.containsKey(key)) {
                     pauseLiftedViews[key] = view.translationY
                 }
                 if (view.translationY != -PAUSE_LIFT_PX) {
                     view.translationY = -PAUSE_LIFT_PX
+                    liftedCount++
                     if (verbose) {
-                        YLog.debug("$TAG: pause lift ${view.javaClass.simpleName} up ${PAUSE_LIFT_PX.toInt()}px")
+                        YLog.debug(
+                            "$TAG: pause lift ${view.javaClass.simpleName} up ${PAUSE_LIFT_PX.toInt()}px " +
+                                "y=$loc[1] h=${view.height} vis=${view.visibility}"
+                        )
                     }
                 }
             }
+        }
+        if (verbose && targets.isNotEmpty()) {
+            YLog.debug("$TAG: pause lift pass done, matched=${targets.size} lifted=$liftedCount")
+        }
+    }
+
+    /**
+     * 打印可能造成“视频圆角”的视图：clipToOutline=true 或 outlineProvider 非默认、且落在
+     * 可视窗口内的视图（抖音用 outline 圆角裁剪视频区域，清爽全屏后应去掉却残留）。
+     */
+    private fun readClipToOutline(view: View): Boolean =
+        runCatching { view.javaClass.getMethod("isClipToOutline").invoke(view) as? Boolean }.getOrNull() ?: false
+
+    private fun readHasOutline(view: View): Boolean =
+        runCatching { view.javaClass.getMethod("hasOutline").invoke(view) as? Boolean }.getOrNull() ?: false
+
+    private fun dumpRoundedClipViews(activity: Activity) {
+        val decor = activity.window?.decorView ?: return
+        val screenW = decor.right - decor.left
+        val screenH = decor.bottom - decor.top
+        val found = ArrayList<View>()
+        val counter = intArrayOf(0)
+        fun walk(view: View, depth: Int) {
+            if (depth > 14 || counter[0] > 3000) {
+                return
+            }
+            counter[0]++
+            if (view.visibility == View.VISIBLE && view.width > 0 && view.height > 0 &&
+                (readClipToOutline(view) || readHasOutline(view))
+            ) {
+                val loc = IntArray(2)
+                view.getLocationInWindow(loc)
+                if (loc[0] in 0 until screenW && loc[1] in 0 until screenH && found.size < 25) {
+                    found.add(view)
+                }
+            }
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    walk(view.getChildAt(i), depth + 1)
+                }
+            }
+        }
+        walk(decor, 0)
+        if (found.isEmpty()) {
+            return
+        }
+        YLog.debug("$TAG: rounded-clip candidate views (${found.size})")
+        found.forEach { view ->
+            val loc = IntArray(2)
+            view.getLocationInWindow(loc)
+            val idText = if (view.id != View.NO_ID) "id=0x${view.id.toString(16)}" else "id=no"
+            YLog.debug(
+                "$TAG:   [rounded] ${view.javaClass.name} top=${loc[1]} bottom=${loc[1] + view.height} " +
+                    "x=${loc[0]} w=${view.width} $idText clipToOutline=${readClipToOutline(
+                        view
+                    )} bg=${view.background?.javaClass?.simpleName}"
+            )
         }
     }
 
