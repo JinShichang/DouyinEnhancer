@@ -161,7 +161,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.16 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.17 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -945,10 +945,9 @@ object CleanModeHooker : YukiBaseHooker() {
     }
 
     /**
-     * 首次进入清爽约 2s 后，把主页底栏做一次“显示 250ms → 隐藏”：
-     * 抖音根据底栏可见性决定 feed 视频底部是否圆角（底栏可见=圆角，隐藏=方角），
-     * 手动 GONE 不触发它的状态切换，只有真实可见性变化才生效（用户“暂停再继续”能消
-     * 圆角即因底栏经历了一次显示→隐藏）。此处仅切底栏，不闪其它控件。
+     * 首次进入清爽约 2s 后，忠实模拟一次“暂停→继续”的布局动作（仅底栏+pager，不闪其它控件）：
+     * 底栏显示 + pager 还原原生尺寸 → 300ms 后 底栏隐藏 + pager 回全屏。
+     * 目的：让抖音把“feed 视频底部圆角（底栏可见时的原生形态）”的状态翻成“底栏已隐藏=方角”。
      */
     private fun doFirstEntryRoundTrip() {
         val activity = mainActivityRef?.get() ?: return
@@ -956,21 +955,54 @@ object CleanModeHooker : YukiBaseHooker() {
         val decor = activity.window?.decorView ?: return
         val bars = ArrayList<View>()
         collectByClassName(decor, loader, "com.ss.android.ugc.aweme.homepage.ui.bottombar.MainBottomTabContainer", bars)
-        val bar = bars.firstOrNull { it.visibility != View.VISIBLE && it.bottom > it.top }
-            ?: bars.firstOrNull { it.bottom > it.top }
-            ?: return
-        if (bar.visibility != View.VISIBLE) {
-            bar.visibility = View.VISIBLE
-            if (verbose) {
-                YLog.debug("$TAG: first-entry round trip: bottom bar shown")
-            }
+        val bar = bars.firstOrNull() ?: return
+        val pagers = ArrayList<View>()
+        collectByClassName(decor, loader, "com.ss.android.ugc.aweme.common.widget.VerticalViewPager", pagers)
+        val pager = pagers.firstOrNull()
+        val screenH = decor.bottom - decor.top
+        // 阶段1：显示底栏 + pager 原生尺寸
+        bar.visibility = View.VISIBLE
+        if (pager != null) {
+            applyPagerState(pager, screenH, native = true)
+        }
+        if (verbose) {
+            YLog.debug("$TAG: first-entry round trip -> bottom bar shown, pager native")
         }
         mainHandler.postDelayed({
+            // 阶段2：隐藏底栏 + pager 回全屏
             bar.visibility = View.GONE
-            if (verbose) {
-                YLog.debug("$TAG: first-entry round trip: bottom bar hidden (rounding state refreshed)")
+            if (pager != null) {
+                applyPagerState(pager, screenH, native = false)
             }
-        }, 250L)
+            if (verbose) {
+                YLog.debug("$TAG: first-entry round trip -> bottom bar hidden, pager fullscreen")
+            }
+        }, 300L)
+    }
+
+    /** 按“原生/全屏”直接设置 pager 的锚定与高度（不触碰 pagerFullscreenChanged 记账，避免破坏暂停还原） */
+    private fun applyPagerState(pager: View, screenH: Int, native: Boolean) {
+        val lp = pager.layoutParams ?: return
+        val rlp = lp as? RelativeLayout.LayoutParams ?: return
+        val key = System.identityHashCode(pager)
+        if (native) {
+            val above = pagerOriginalRuleAbove[key] ?: rlp.getRule(RelativeLayout.ABOVE)
+            val below = pagerOriginalRuleBelow[key] ?: rlp.getRule(RelativeLayout.BELOW)
+            if (above != 0) {
+                rlp.addRule(RelativeLayout.ABOVE, above)
+            }
+            if (below != 0) {
+                rlp.addRule(RelativeLayout.BELOW, below)
+            }
+            lp.height = ViewGroup.LayoutParams.MATCH_PARENT
+        } else {
+            rlp.removeRule(RelativeLayout.ABOVE)
+            rlp.removeRule(RelativeLayout.BELOW)
+            lp.height = screenH
+        }
+        pager.layoutParams = lp
+        pager.requestLayout()
+        (pager.parent as? View)?.requestLayout()
     }
 
     private fun describeLp(lp: ViewGroup.LayoutParams?): String {
