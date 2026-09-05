@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
+import android.widget.RelativeLayout
 import com.highcapable.yukihookapi.hook.core.YukiMemberHookCreator
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
@@ -121,6 +122,9 @@ object CleanModeHooker : YukiBaseHooker() {
     // RTViewPager 原始布局高度（清爽时直接撑到全屏）
     private val pagerOriginalHeight = HashMap<Int, Int>()
 
+    // 已成功把翻页器撑到全屏的实例（清爽期间保持，不随暂停恢复）
+    private val pagerFullscreenApplied = HashSet<Int>()
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val rehideRunnable = object : Runnable {
         override fun run() {
@@ -150,7 +154,7 @@ object CleanModeHooker : YukiBaseHooker() {
             }
             return
         }
-        YLog.debug("$TAG: CleanModeHooker v7.6 active (module 0.11.1)")
+        YLog.debug("$TAG: CleanModeHooker v7.7 active (module 0.11.1)")
         installGlobalImmersiveHook()
         installPlaybackStateHooks()
     }
@@ -708,10 +712,22 @@ object CleanModeHooker : YukiBaseHooker() {
         }
     }
 
-    /** 清爽隐藏时直接把翻页器(RTViewPager)高度设为屏幕全高 */
+    /**
+     * 清爽隐藏时把翻页器(RTViewPager)撑到全屏。
+     *
+     * 逆向结论（抖音 38.8.0 feed 布局 wk6/wk7.xml）：RTViewPager 在父容器
+     * DisallowInterceptRelativeLayout 里被 layout_above 锚在底部 BottomSpace 之上；
+     * BottomSpace（com.ss.android.ugc.aweme.feed.ui.bottom.BottomSpace）运行时高约
+     * 196px（为底栏预留的不可见占位），所以父容器虽然全高 3168，pager 却只有 2972。
+     * 只改 lp.height 不够（above 锚定会把 pager 底边钉在 BottomSpace 顶部），
+     * 这里同时移除 above/below 锚定并显式给全高。清爽开启期间保持（不随暂停恢复）。
+     */
     private fun adjustPagerHeight(decorView: View, classLoader: ClassLoader, hidden: Boolean) {
         val pagers = ArrayList<View>()
         collectByClassName(decorView, classLoader, "com.ss.android.ugc.aweme.common.widget.VerticalViewPager", pagers)
+        if (pagers.isEmpty()) {
+            return
+        }
         val screenH = decorView.bottom - decorView.top
         pagers.forEach { pager ->
             val key = System.identityHashCode(pager)
@@ -719,22 +735,46 @@ object CleanModeHooker : YukiBaseHooker() {
             if (hidden) {
                 val original = pagerOriginalHeight[key] ?: lp.height
                 pagerOriginalHeight[key] = original
+                val rlp = lp as? RelativeLayout.LayoutParams
+                var layoutChanged = false
+                var anchors = ""
+                if (rlp != null) {
+                    val above = rlp.getRule(RelativeLayout.ABOVE)
+                    val below = rlp.getRule(RelativeLayout.BELOW)
+                    if (above != 0) {
+                        rlp.removeRule(RelativeLayout.ABOVE)
+                        anchors += "above=0x${above.toString(16)} "
+                        layoutChanged = true
+                    }
+                    if (below != 0) {
+                        rlp.removeRule(RelativeLayout.BELOW)
+                        anchors += "below=0x${below.toString(16)}"
+                        layoutChanged = true
+                    }
+                } else if (verbose) {
+                    YLog.debug("$TAG: RTViewPager lp is ${lp.javaClass.name}, not RelativeLayout.LayoutParams; skip anchor removal")
+                }
                 if (lp.height != screenH) {
                     lp.height = screenH
+                    layoutChanged = true
+                }
+                if (layoutChanged) {
                     pager.layoutParams = lp
+                }
+                val laidOutHeight = pager.bottom - pager.top
+                val alreadyFull = laidOutHeight >= screenH - 2
+                if (alreadyFull) {
+                    pagerFullscreenApplied.add(key)
+                } else if (!pagerFullscreenApplied.contains(key) && (layoutChanged || laidOutHeight > 0)) {
+                    // 首次修改主动重排；若实际仍未长到全高（MeasureOnce 优化可能跳过重测）则补一次
                     pager.requestLayout()
+                    (pager.parent as? View)?.requestLayout()
                     if (verbose) {
-                        YLog.debug("$TAG: RTViewPager height -> $screenH (orig $original)")
+                        YLog.debug("$TAG: RTViewPager height -> $screenH (orig $original, anchors ${anchors.ifEmpty { "none" }})")
                     }
                 }
-            } else {
-                val original = pagerOriginalHeight.remove(key)
-                if (original != null && lp.height != original) {
-                    lp.height = original
-                    pager.layoutParams = lp
-                    pager.requestLayout()
-                }
             }
+            // 清爽开启期间保持全屏，不随暂停恢复（与“留白不恢复”一致），进程内不还原
         }
     }
 
