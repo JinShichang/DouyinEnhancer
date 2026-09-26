@@ -15,26 +15,26 @@ import com.highcapable.kavaref.extension.asParameterizedTypeOrNull
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.config.ConfigManager
+import io.github.twyora.douyinenhancer.constant.HookInfoFiles
+import io.github.twyora.douyinenhancer.constant.SignatureKeys
 import io.github.twyora.douyinenhancer.generated.AppProperties
 import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.Method
 import io.github.twyora.douyinenhancer.utils.toClass
-import io.github.twyora.douyinenhancer.utils.weak
 import io.github.twyora.douyinenhancer.utils.verifySha256RsaSignature
-import io.github.twyora.douyinenhancer.constant.HookInfoFiles
-import io.github.twyora.douyinenhancer.constant.SignatureKeys
-import org.erdtman.jcs.JsonCanonicalizer
-import org.json.JSONObject
-import java.io.File
+import io.github.twyora.douyinenhancer.utils.weak
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.lang.reflect.Modifier
+import kotlin.io.encoding.Base64
 import kotlin.time.measureTimedValue
+import org.erdtman.jcs.JsonCanonicalizer
+import org.json.JSONObject
 import org.luckypray.dexkit.DexKitBridge
 import org.luckypray.dexkit.query.enums.StringMatchType
 import org.luckypray.dexkit.query.matchers.base.OpCodesMatcher
-import kotlin.io.encoding.Base64
 
 val Configs.Class.nameOrNull
     get() = if (hasName()) {
@@ -1023,7 +1023,6 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         @Volatile
         lateinit var instance: DouyinPackage
 
-
         fun init(classLoader: ClassLoader, context: Context) {
             instance = DouyinPackage(classLoader, context)
         }
@@ -1158,7 +1157,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         private fun Configs.HookInfo.Builder.applyFrom(hookInfoJson: JSONObject) {
             val preset = Configs.HookInfo.newBuilder().apply {
                 JsonFormat.parser().ignoringUnknownFields().merge(
-                    hookInfoJson.toString(), this
+                    hookInfoJson.toString(),
+                    this
                 )
             }.build()
             this.applyFrom(preset)
