@@ -130,6 +130,10 @@
             android:defaultValue="false"
             android:key="load_custom_hook_info"
             android:title="@string/pref_module_load_custom_hook_info_title" />
+
+        <Preference
+            android:key="reset_custom_hook_info"
+            android:title="@string/pref_module_reset_custom_hook_info_title" />
     </PreferenceCategory>
 
     <PreferenceCategory

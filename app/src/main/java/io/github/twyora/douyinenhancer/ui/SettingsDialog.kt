@@ -110,6 +110,7 @@ class SettingsDialog(context: Context) :
             }
             findPreference("invalid_hook_info")?.onPreferenceClickListener = this
             findPreference("load_custom_hook_info")?.onPreferenceClickListener = this
+            findPreference("reset_custom_hook_info")?.onPreferenceClickListener = this
             findPreference("version")?.summary = BuildConfig.VERSION_NAME
             findPreference("version")?.onPreferenceClickListener = this
             findPreference("build_time")?.summary =
@@ -188,6 +189,24 @@ class SettingsDialog(context: Context) :
             }
 
             "load_custom_hook_info" -> onLoadCustomHookInfoClick()
+
+            "reset_custom_hook_info" -> {
+                val presetFile = File(context.cacheDir, HookInfoFiles.HOOK_INFO_PRESET_FILE_NAME)
+                if (presetFile.exists()) {
+                    presetFile.writeText("")
+                }
+                ConfigManager.module.hookInfoGeneration.value++
+
+                activity.runOnUiThread {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.success),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+                true
+            }
 
             else -> false
         }
