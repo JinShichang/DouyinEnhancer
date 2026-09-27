@@ -23,6 +23,7 @@ jetbrainsKotlinJvm = "2.2.10"
 ksp-symbol-processing-api = "2.3.6"
 commonsCollections4 = "4.5.0"
 java-json-canonicalization = "1.1"
+jgit = "7.8.0.202609011348-r"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -54,6 +55,7 @@ auto-service-ksp = { module = "dev.zacsweers.autoservice:auto-service-ksp", vers
 ksp-symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp-symbol-processing-api" }
 commons-collections4 = { group = "org.apache.commons", name = "commons-collections4", version.ref = "commonsCollections4" }
 json-canonicalization = { module = "io.github.erdtman:java-json-canonicalization", version.ref = "java-json-canonicalization" }
+jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
