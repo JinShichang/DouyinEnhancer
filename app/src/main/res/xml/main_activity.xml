@@ -15,6 +15,15 @@
             android:key="hide_launcher_icon"
             android:title="@string/pref_settings_hide_launcher_icon_title"
             android:summary="@string/pref_settings_hide_launcher_icon_summary" />
+
+        <Preference
+            android:key="main_help"
+            android:title="@string/pref_settings_main_help_title"
+            android:summary="@string/pref_settings_main_help_summary">
+            <intent
+                android:action="android.intent.action.VIEW"
+                android:data="@string/docs_url" />
+        </Preference>
     </PreferenceCategory>
 
     <PreferenceCategory

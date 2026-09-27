@@ -204,4 +204,6 @@
     <string name="pref_about_activation_status_deactivated_summary">抖柚未激活</string>
     <string name="pref_about_activation_status_activated_title">已启用</string>
     <string name="pref_about_activation_status_activated_summary">抖柚已激活</string>
+    <string name="pref_settings_main_help_title">帮助</string>
+    <string name="pref_settings_main_help_summary">点击查看完整文档、使用指南与常见问题</string>
 </resources>
