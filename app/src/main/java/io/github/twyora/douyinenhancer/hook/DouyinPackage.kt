@@ -15,6 +15,7 @@ import com.highcapable.kavaref.extension.asParameterizedTypeOrNull
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.config.ConfigManager
+import io.github.twyora.douyinenhancer.config.provider.ModuleConfigProvider
 import io.github.twyora.douyinenhancer.constant.HookInfoFiles
 import io.github.twyora.douyinenhancer.constant.SignatureKeys
 import io.github.twyora.douyinenhancer.generated.AppProperties
@@ -1066,11 +1067,19 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     return@runCatching
                 }
 
+                if (ConfigManager.module.hookInfoSource.value == ModuleConfigProvider.HOOK_INFO_SOURCE_UNTRUSTED_OVERLAY) {
+                    YLog.warn(
+                        "$TAG: Loading custom HookInfo from UNTRUSTED SOURCES may cause malfunctions." +
+                                " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
+                    )
+                }
+
                 return hookInfoBuilder.build()
             }.onFailure {
                 YLog.error("$TAG: failed to read hookInfo: ", it)
             }
 
+            ConfigManager.module.hookInfoSource.value = ModuleConfigProvider.HOOK_INFO_SOURCE_BUILTIN
             // HookInfo rebuild is required at this stage
             val generatedHookInfo = initHookInfo(context)
             runCatching {
@@ -1110,14 +1119,14 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     hookInfoPresetJson.toString()
                 ).encodedString.toByteArray(Charsets.UTF_8)
 
-                if (expectedSignature.isNotBlank() && ByteArrayInputStream(hookInfoPresetBytes).use { stream ->
-                        verifySha256RsaSignature(
-                            stream,
-                            Base64.decode(expectedSignature),
-                            Base64.decode(SignatureKeys.HOOK_INFO_PRESET_PUBLIC_KEY_B64)
-                        )
-                    }
-                ) {
+                val verifyOk = expectedSignature.isNotBlank() && ByteArrayInputStream(hookInfoPresetBytes).use { stream ->
+                    verifySha256RsaSignature(
+                        stream,
+                        Base64.decode(expectedSignature),
+                        Base64.decode(SignatureKeys.HOOK_INFO_PRESET_PUBLIC_KEY_B64)
+                    )
+                }
+                if (verifyOk) {
                     YLog.info("$TAG: custom hook info signature verified")
                 } else {
                     if (expectedSignature.isBlank()) {
@@ -1139,6 +1148,11 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 generatedHookInfo.applyFrom(customHookInfoJson)
                 generatedHookInfo.lastUpdateTime = snapshotLastUpdateTime
                 generatedHookInfo.generation = snapshotGeneration
+                ConfigManager.module.hookInfoSource.value = if (verifyOk) {
+                    ModuleConfigProvider.HOOK_INFO_SOURCE_TRUSTED_OVERLAY
+                } else {
+                    ModuleConfigProvider.HOOK_INFO_SOURCE_UNTRUSTED_OVERLAY
+                }
             }.onFailure {
                 YLog.error("$TAG: failed to merge custom hook info", it)
             }
