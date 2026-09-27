@@ -1109,7 +1109,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     YLog.warn("$TAG: custom hook info preset missing 'module_version_code'")
                     BuildConfig.VERSION_CODE
                 }
-                val customModuleVersionName = (customHookInfoJson.opt("module_version_name") as? Int) ?: run {
+                val customModuleVersionName = (customHookInfoJson.opt("module_version_name") as? String) ?: run {
                     YLog.warn("$TAG: custom hook info preset missing 'module_version_name'")
                     BuildConfig.VERSION_NAME
                 }
