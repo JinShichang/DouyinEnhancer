@@ -153,6 +153,13 @@
     <string name="pref_module_disable_verbose_logs_title">Disable verbose logs</string>
     <string name="pref_module_disable_verbose_logs_summary">Report issues request to include verbose logs</string>
 
+    <string name="pref_module_invalid_hook_info_title">Invalidate obfuscation mapping</string>
+    <string name="pref_module_invalid_hook_info_summary">This forces the module to re-search methods and rebuild the obfuscation mapping</string>
+    <string name="pref_module_load_custom_hook_info_title">Load custom obfuscation mapping</string>
+    <string name="pref_module_reset_custom_hook_info_title">Reset custom obfuscation mapping</string>
+    <string name="load_custom_hook_info_chooser">Choose custom obfuscation mapping</string>
+    <string name="untrusted_obfuscation_map">Untrusted obfuscation mapping</string>
+
     <string name="verify_dialog_title">Verification</string>
     <string name="verify_dialog_description">This module is released only on GitHub. To respect the developer’s work, enter the module download URL for verification. Please read the repository README carefully before use.</string>
     <string name="verify_dialog_input_hint">GitHub address</string>
@@ -177,10 +184,14 @@
     <string name="pref_about_back_then_title">Back Then🎵</string>
     <string name="pref_about_back_then_summary">春风化青芒 十年如一往\n岁月如白驹如萤火如夕阳\n年轻时许下的豪言万丈\n何日遣冯唐🎵</string>
 
+    <string name="success">Success</string>
+    <string name="failed">Failed</string>
     <string name="add">Add</string>
     <string name="delete">Delete</string>
     <string name="regex_mode">Regex mode</string>
     <string name="save_success_restart_required">Saved successfully. Some configurations will take effect after restarting the app</string>
+    <string name="import_success_restart_required">Import successfully. Some configurations will take effect after restarting the app</string>
+    <string name="import_failed">Import failed: %s</string>
     <string name="restart_required">Some features will take effect after restarting the app</string>
     <string name="notify_update_available">Douyin Enhancer has an update</string>
 
