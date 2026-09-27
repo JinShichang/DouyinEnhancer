@@ -21,4 +21,24 @@
 #-renamesourcefileattribute SourceFile
 -dontwarn java.lang.reflect.AnnotatedType
 
--keepclassmembers class * extends com.google.protobuf.GeneratedMessageLite { *; }
+# begin protobuf
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageV3 {
+    public <methods>;
+}
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessageV3$Builder {
+    public <methods>;
+}
+
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessage {
+    public <methods>;
+}
+-keepclassmembers class * extends com.google.protobuf.GeneratedMessage$Builder {
+    public <methods>;
+}
+
+-keepclassmembers public class * extends com.google.protobuf.ProtocolMessageEnum {
+    public static ** valueOf(**);
+    public static ** values();
+    public <methods>;
+}
+# end protobuf
