@@ -1105,9 +1105,18 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 // below only match the snake_case keys. If you author a preset using
                 // camelCase, these fields fall back to defaults, and a possibly stale custom HookInfo
                 // is loaded unconditionally, which may cause malfunction — that's on you.
-                val customModuleVersionCode = (customHookInfoJson.opt("module_version_code") as? Int) ?: BuildConfig.VERSION_CODE
-                val customModuleVersionName = (customHookInfoJson.opt("module_version_name") as? Int) ?: BuildConfig.VERSION_NAME
-                val customHostVersionCode = (customHookInfoJson.opt("host_version_code") as? Int) ?: generatedHookInfo.hostVersionCode
+                val customModuleVersionCode = (customHookInfoJson.opt("module_version_code") as? Int) ?: run {
+                    YLog.warn("$TAG: custom hook info preset missing 'module_version_code'")
+                    BuildConfig.VERSION_CODE
+                }
+                val customModuleVersionName = (customHookInfoJson.opt("module_version_name") as? Int) ?: run {
+                    YLog.warn("$TAG: custom hook info preset missing 'module_version_name'")
+                    BuildConfig.VERSION_NAME
+                }
+                val customHostVersionCode = (customHookInfoJson.opt("host_version_code") as? Int) ?: run {
+                    YLog.warn("$TAG: custom hook info preset missing 'host_version_code'")
+                    generatedHookInfo.hostVersionCode
+                }
 
                 // before merging custom hook info into final hook info, verify version validity
                 if (customModuleVersionCode != generatedHookInfo.moduleVersionCode ||
