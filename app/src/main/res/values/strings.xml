@@ -204,4 +204,6 @@
     <string name="pref_about_activation_status_deactivated_summary">Douyin Enhancer not activated</string>
     <string name="pref_about_activation_status_activated_title">Enabled</string>
     <string name="pref_about_activation_status_activated_summary">Douyin Enhancer activated</string>
+    <string name="pref_settings_main_help_title">Help</string>
+    <string name="pref_settings_main_help_summary">Tap to view full documentation, guides and FAQs</string>
 </resources>
