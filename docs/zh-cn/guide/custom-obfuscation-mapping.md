@@ -27,14 +27,14 @@
     // 以下三个字段均为可选，用于限定配置的生效范围。
     // 强烈建议填写，若未填写将导致模块忽略该限定条件，
     // 这可能会导致模块在错误的版本上加载配置导致模块或宿主崩溃！
-    "moduleVersionCode": "<moduleVersionCode>",
-    "moduleVersionName": "<moduleVersionName>",
-    "hostVersionCode": "<hostVersionCode>",
-    "<className>": {
+    "module_version_code": "<moduleVersionCode>",
+    "module_version_name": "<moduleVersionName>",
+    "host_version_code": "<hostVersionCode>",
+    "<class_name>": {
       "class": {
         "name": "<classQualifiedName>"
       },
-      "<methodName>": {
+      "<method_name>": {
         "name": "<methodName>",
         "parameters": {
           "values": [
@@ -44,7 +44,7 @@
           ]
         }
       },
-      "<fieldName>": {
+      "<field_name>": {
         "name": "<fieldName>"
       }
     },

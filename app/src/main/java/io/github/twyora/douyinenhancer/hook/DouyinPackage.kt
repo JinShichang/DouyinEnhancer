@@ -1102,12 +1102,12 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 }
 
                 // NOTE: JSON parsing accepts both snake_case and camelCase names, but the checks
-                // below only match the camelCase keys. If you author a preset using
-                // snake_case, these fields fall back to defaults, and a possibly stale custom HookInfo
-                // is loaded unconditionally, which may cause malfunction — that's on you
-                val customModuleVersionCode = (customHookInfoJson.opt("moduleVersionCode") as? Int) ?: BuildConfig.VERSION_CODE
-                val customModuleVersionName = (customHookInfoJson.opt("moduleVersionName") as? Int) ?: BuildConfig.VERSION_NAME
-                val customHostVersionCode = (customHookInfoJson.opt("hostVersionCode") as? Int) ?: generatedHookInfo.hostVersionCode
+                // below only match the snake_case keys. If you author a preset using
+                // camelCase, these fields fall back to defaults, and a possibly stale custom HookInfo
+                // is loaded unconditionally, which may cause malfunction — that's on you.
+                val customModuleVersionCode = (customHookInfoJson.opt("module_version_code") as? Int) ?: BuildConfig.VERSION_CODE
+                val customModuleVersionName = (customHookInfoJson.opt("module_version_name") as? Int) ?: BuildConfig.VERSION_NAME
+                val customHostVersionCode = (customHookInfoJson.opt("host_version_code") as? Int) ?: generatedHookInfo.hostVersionCode
 
                 // before merging custom hook info into final hook info, verify version validity
                 if (customModuleVersionCode != generatedHookInfo.moduleVersionCode ||

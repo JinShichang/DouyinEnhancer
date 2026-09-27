@@ -28,20 +28,20 @@ in missing method mappings to quickly restore functionality without waiting for 
 
 Below is an obfuscation mapping template:
 
-```
+```json
 {
   "hookInfo": {
     // All three fields below are optional and limit the scope where this configuration applies.
     // Strongly recommended to fill them out. If omitted, the module ignores these constraints,
     // which may cause the configuration to load on the wrong version and crash the module or host app!
-    "moduleVersionCode": "<moduleVersionCode>",
-    "moduleVersionName": "<moduleVersionName>",
-    "hostVersionCode": "<hostVersionCode>",
-    "<className>": {
+    "module_version_code": "<moduleVersionCode>",
+    "module_version_name": "<moduleVersionName>",
+    "host_version_code": "<hostVersionCode>",
+    "<class_name>": {
       "class": {
         "name": "<classQualifiedName>"
       },
-      "<methodName>": {
+      "<method_name>": {
         "name": "<methodName>",
         "parameters": {
           "values": [
@@ -51,7 +51,7 @@ Below is an obfuscation mapping template:
           ]
         }
       },
-      "<fieldName>": {
+      "<field_name>": {
         "name": "<fieldName>"
       }
     },
