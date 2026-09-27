@@ -1085,20 +1085,26 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
             runCatching {
                 val hookInfoPresetFile = File(context.cacheDir, HookInfoFiles.HOOK_INFO_PRESET_FILE_NAME)
                 if (!hookInfoPresetFile.exists()) {
-                    YLog.info("$TAG: no custom hook info present, skipping load")
+                    YLog.info("$TAG: no custom hook info present, skipping loading")
                     return@runCatching
                 } else if (!(hookInfoPresetFile.isFile && hookInfoPresetFile.canRead())) {
                     YLog.warn("$TAG: custom hookInfoFile is not a file or can not be read")
                     return@runCatching
+                } else if (hookInfoPresetFile.length() == 0L) {
+                    YLog.warn("$TAG: custom hook info preset file is empty")
+                    return@runCatching
                 }
 
                 val hookInfoPresetJson = JSONObject(hookInfoPresetFile.readText(Charsets.UTF_8))
-                val customHookInfoJson = hookInfoPresetJson.getJSONObject("hookInfo")
+                val customHookInfoJson = hookInfoPresetJson.optJSONObject("hookInfo") ?: run {
+                    YLog.warn("$TAG: custom hook info preset missing 'hookInfo' object")
+                    return@runCatching
+                }
 
                 // NOTE: JSON parsing accepts both snake_case and camelCase names, but the checks
                 // below only match the camelCase keys. If you author a preset using
-                // snake_case, these fields fall back to defaults and a possibly stale
-                // custom hook info may load unconditionally and malfunction — that's on you.
+                // snake_case, these fields fall back to defaults, and a possibly stale custom HookInfo
+                // is loaded unconditionally, which may cause malfunction — that's on you
                 val customModuleVersionCode = (customHookInfoJson.opt("moduleVersionCode") as? Int) ?: BuildConfig.VERSION_CODE
                 val customModuleVersionName = (customHookInfoJson.opt("moduleVersionName") as? Int) ?: BuildConfig.VERSION_NAME
                 val customHostVersionCode = (customHookInfoJson.opt("hostVersionCode") as? Int) ?: generatedHookInfo.hostVersionCode
