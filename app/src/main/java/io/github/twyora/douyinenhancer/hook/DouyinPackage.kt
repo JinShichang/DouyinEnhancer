@@ -1119,6 +1119,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 }
 
                 val expectedSignature = hookInfoPresetJson.optString("signature")
+                YLog.info("$TAG: custom hook info preset signature: $expectedSignature")
                 // "signature" not included for signature checking
                 hookInfoPresetJson.remove("signature")
                 val hookInfoPresetBytes = JsonCanonicalizer(
