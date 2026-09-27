@@ -153,12 +153,12 @@
     <string name="pref_module_disable_verbose_logs_title">Disable verbose logs</string>
     <string name="pref_module_disable_verbose_logs_summary">Report issues request to include verbose logs</string>
 
-    <string name="pref_module_load_custom_hook_info_title">Load custom obfuscation map</string>
-    <string name="pref_module_invalid_hook_info_title">Invalidate obfuscation map</string>
-    <string name="pref_module_invalid_hook_info_summary">This forces the module to re-search methods and rebuild the obfuscation map</string>
-    <string name="load_custom_hook_info_chooser">Choose custom obfuscation map</string>
-    <string name="pref_module_reset_custom_hook_info_title">Reset custom obfuscation map</string>
-    <string name="untrusted_obfuscation_map">Untrusted obfuscation map</string>
+    <string name="pref_module_invalid_hook_info_title">Invalidate obfuscation mapping</string>
+    <string name="pref_module_invalid_hook_info_summary">This forces the module to re-search methods and rebuild the obfuscation mapping</string>
+    <string name="pref_module_load_custom_hook_info_title">Load custom obfuscation mapping</string>
+    <string name="pref_module_reset_custom_hook_info_title">Reset custom obfuscation mapping</string>
+    <string name="load_custom_hook_info_chooser">Choose custom obfuscation mapping</string>
+    <string name="untrusted_obfuscation_map">Untrusted obfuscation mapping</string>
 
     <string name="verify_dialog_title">Verification</string>
     <string name="verify_dialog_description">This module is released only on GitHub. To respect the developer’s work, enter the module download URL for verification. Please read the repository README carefully before use.</string>
