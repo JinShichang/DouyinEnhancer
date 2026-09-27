@@ -45,7 +45,8 @@ Below is an obfuscation mapping template:
         "name": "<methodName>",
         "parameters": {
           "values": [
-            // Optional. For overloaded methods, locate the target method following the parameter order in the function signature
+            // When overloaded versions exist, locate the method required by the module according to the parameter order in the function signature.
+            // If the list is empty, match only by method name.
             "<paramTypeQualifiedName>",
             ...
           ]
@@ -62,6 +63,14 @@ Below is an obfuscation mapping template:
   "signature": "..."
 }
 ```
+
+> The `hookInfo` in custom mappings will be **merged with the internally generated `hookInfo` using
+override semantics**: explicitly specified fields override their corresponding generated values,
+> while unspecified fields retain the built-in results unchanged.
+>
+> For example, if only `hookInfo.<class_name>.<method_name>.name` is set without configuring its
+`<parameters>.values`, after merging, the method name will use the explicitly defined value, and the
+> parameter list will continue to use the internally generated result.
 
 **Notice**: Although custom obfuscation mapping contains a signature field, import will not be
 rejected even if signature verification fails.
