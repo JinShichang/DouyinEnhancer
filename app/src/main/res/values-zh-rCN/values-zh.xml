@@ -129,6 +129,15 @@
     <string name="playback_component_block_ai_co_creators_three">✦ AI合拍作者头像</string>
     <string name="playback_component_block_aigc_cocreate_status_title">✦ AI共创标签</string>
 
+    <string name="bottom_tab_block_dialog_title">隐藏底部导航项</string>
+    <string name="bottom_tab_main_switch_title">总开关</string>
+    <string name="bottom_tab_main_switch_summary">开启后可以使用隐藏底部导航项功能</string>
+    <string name="bottom_tab_hide_homepage_home">首页</string>
+    <string name="bottom_tab_hide_homepage_mall">商城</string>
+    <string name="bottom_tab_hide_homepage_publish">发布按钮</string>
+    <string name="bottom_tab_hide_homepage_notification">消息</string>
+    <string name="bottom_tab_hide_homepage_profile">我</string>
+
     <string name="pref_category_backup">备份和还原</string>
     <string name="pref_backup_export_title">导出配置</string>
     <string name="pref_backup_import_title">导入配置</string>
