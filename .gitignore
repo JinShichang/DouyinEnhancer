@@ -13,6 +13,7 @@ local.properties
 .cxx
 /captures
 /build
+**/build/
 /app/release
 
 ### OS ###

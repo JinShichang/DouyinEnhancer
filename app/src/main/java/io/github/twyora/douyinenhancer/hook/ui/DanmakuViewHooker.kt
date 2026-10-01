@@ -25,7 +25,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     }
 
     override fun onHook() {
-        if (!ConfigManager.ui.keepDanmakuVisible.value) {
+        if (!ConfigManager.ui.keepDanmakuVisible.value && !ConfigManager.ui.cleanMode.value) {
             if (verbose) {
                 YLog.debug("$TAG: keep danmaku visible disabled, skip danmaku hooks")
             }
@@ -33,7 +33,6 @@ object DanmakuViewHooker : YukiBaseHooker() {
         }
         installAssignDanmakuViewIdHook()
         installAddDanmakuViewIdToCleanModeWhiteListHook()
-        installBlockDanmakuViewHidingHook()
     }
 
     private fun installAssignDanmakuViewIdHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
@@ -69,28 +68,16 @@ object DanmakuViewHooker : YukiBaseHooker() {
         }
     }
 
-    private fun installAddDanmakuViewIdToCleanModeWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.cleanModePresenter.selfClass?.resolveMethod(
+    private fun installAddDanmakuViewIdToCleanModeWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.cleanModePresenter.selfClass?.resolveMethod(
             packageInstance.cleanModePresenter.enterCleanMode()
         )?.hook {
             before {
-                // The whiteList argument's position in the parameter list varies across host versions,
-                // resolve it at runtime
-                val whiteList = args.firstNotNullOfOrNull {
-                    @Suppress("UNCHECKED_CAST")
-                    it as? MutableList<Int>
-                } ?: run {
-                    YLog.error("$TAG: whiteList not found in the argument list")
-                    return@before
-                }
-
-                if (verbose) {
-                    YLog.debug("$TAG: add danmaku view ids into clean mode white list")
-                }
-
-                danmakuViewIds.forEach {
-                    whiteList.add(it)
-                }
+                val index = checkNotNull(packageInstance.cleanModePresenter.enterCleanMode().parameters).indexOf("java.util.List")
+                check(index >= 0) { "Clean mode whitelist parameter is missing from HookInfo" }
+                val whiteList = checkNotNull(args[index]) as List<*>
+                // Native traversal keeps only these descendants and hides their siblings.
+                args[index] = ArrayList((whiteList + danmakuViewIds).distinct())
             }
         }?.result {
             onConductFailure { _, throwable ->
@@ -100,48 +87,4 @@ object DanmakuViewHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook clean mode white list adding", throwable)
             }
         }
-    }
-
-    private fun installBlockDanmakuViewHidingHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.cleanModePresenter.selfClass?.resolveMethod(
-            packageInstance.cleanModePresenter.setVisibility()
-        )?.hook {
-            before {
-                val view = args[0] as? View ?: run {
-                    YLog.error("$TAG: ${args[0]?.javaClass?.name} is not a View")
-                    return@before
-                }
-                val visibility = args[1] as? Int ?: run {
-                    YLog.error("$TAG: ${args[1]?.javaClass?.name} is not a visibility value int")
-                    return@before
-                }
-                if (visibility == View.VISIBLE) {
-                    return@before
-                }
-
-                if (danmakuViewIds.none {
-                        view.findViewById<View?>(it) != null
-                    }
-                ) {
-                    return@before
-                }
-                YLog.info(
-                    "$TAG: ${view::class.qualifiedName}{id=0x${
-                        view.id.toString(
-                            16
-                        )
-                    }} is a danmaku view holder trying to hide itself; intercept it"
-                )
-
-                resultNull()
-            }
-        }?.result {
-            onConductFailure { _, throwable ->
-                YLog.error("$TAG: failed to block danmaku view hiding", throwable)
-            }
-            onHookingFailure { throwable ->
-                YLog.error("$TAG: failed to hook for blocking danmaku view hiding", throwable)
-            }
-        }
-    }
 }
