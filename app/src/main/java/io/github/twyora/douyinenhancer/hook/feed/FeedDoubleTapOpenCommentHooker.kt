@@ -6,10 +6,10 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.invokeMethod
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object FeedDoubleTapOpenCommentHooker : YukiBaseHooker() {
@@ -29,11 +29,11 @@ object FeedDoubleTapOpenCommentHooker : YukiBaseHooker() {
             return
         }
 
-        packageInstance.baseListFragmentPanel.selfClass?.resolveMethod(
+        packageInstance.baseListFragmentPanel.selfClass?.resolveMethodOrNull(
             packageInstance.baseListFragmentPanel.handleDoubleClick()
         )?.hook {
             after {
-                val aweme = instance.invokeMethod<Any>(
+                val aweme = instance.invokeMethodOrNull<Any>(
                     packageInstance.baseListFragmentPanel.getCurrentAweme()
                 ) ?: run {
                     YLog.error("$TAG: unable to get current aweme")
@@ -49,7 +49,7 @@ object FeedDoubleTapOpenCommentHooker : YukiBaseHooker() {
                 }
 
                 if (verbose) {
-                    val awemeId = aweme.getField<String>(
+                    val awemeId = aweme.getFieldOrNull<String>(
                         packageInstance.aweme.aid()
                     )
                     YLog.debug("$TAG: dispatching open-comment-panel event for current aweme, aid: $awemeId")

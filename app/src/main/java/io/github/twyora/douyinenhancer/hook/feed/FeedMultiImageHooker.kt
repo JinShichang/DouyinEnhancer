@@ -8,11 +8,11 @@ import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.FileTypeDetector
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.invokeMethod
-import io.github.twyora.douyinenhancer.utils.invokeStaticMethod
-import io.github.twyora.douyinenhancer.utils.resolveMethod
-import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.invokeStaticMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
+import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 import java.io.File
 import java.io.FileInputStream
 import org.apache.commons.collections4.queue.CircularFifoQueue
@@ -48,15 +48,15 @@ object FeedMultiImageHooker : YukiBaseHooker() {
     }
 
     private fun installInjectPlayUrlIntoImageDownloadHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.downloadAction.selfClass?.resolveMethod(
+        return packageInstance.downloadAction.selfClass?.resolveMethodOrNull(
             packageInstance.downloadAction.startDownload()
         )?.hook {
             val seenAwemeIds = CircularFifoQueue<String>(5)
             before {
-                val aweme = instance.getField<Any>(
+                val aweme = instance.getFieldOrNull<Any>(
                     packageInstance.downloadAction.aweme()
                 ) ?: return@before
-                if (aweme.invokeMethod<Boolean>(
+                if (aweme.invokeMethodOrNull<Boolean>(
                         packageInstance.aweme.isMultiImage()
                     ) == false
                 ) {
@@ -64,7 +64,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
                 }
 
                 // skip if this post was already processed
-                aweme.invokeMethod<String>(
+                aweme.invokeMethodOrNull<String>(
                     packageInstance.aweme.getAid()
                 )?.let {
                     if (seenAwemeIds.contains(it)) {
@@ -73,7 +73,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
                     seenAwemeIds.add(it)
                 }
 
-                val awemeImages = aweme.getField<List<*>>(
+                val awemeImages = aweme.getFieldOrNull<List<*>>(
                     packageInstance.aweme.images()
                 ).takeIf {
                     !it.isNullOrEmpty()
@@ -88,12 +88,12 @@ object FeedMultiImageHooker : YukiBaseHooker() {
                     }
 
                     // use the play URL as the image download URL
-                    imageStruct.getField<List<*>>(
+                    imageStruct.getFieldOrNull<List<*>>(
                         packageInstance.imageUrlStruct.urlList()
                     ).takeIf {
                         !it.isNullOrEmpty()
                     }?.let {
-                        imageStruct.setField(
+                        imageStruct.setFieldOrNull(
                             packageInstance.imageUrlStruct.downloadUrlList(),
                             it
                         )
@@ -102,13 +102,13 @@ object FeedMultiImageHooker : YukiBaseHooker() {
                     }
 
                     // also replace the video's download URL when the post has a video
-                    imageStruct.getField<Any>(
+                    imageStruct.getFieldOrNull<Any>(
                         packageInstance.imageUrlStruct.video()
                     )?.let { video ->
-                        video.invokeMethod<Any>(
+                        video.invokeMethodOrNull<Any>(
                             packageInstance.video.getPlayAddr()
                         )?.let { playAddr ->
-                            video.setField(
+                            video.setFieldOrNull(
                                 packageInstance.video.downloadAddr(),
                                 playAddr
                             )
@@ -116,11 +116,11 @@ object FeedMultiImageHooker : YukiBaseHooker() {
                                 YLog.debug("$TAG:play URL used as video download address")
                             }
                         }?.also {
-                            video.setField(
+                            video.setFieldOrNull(
                                 packageInstance.video.hasWaterMark(),
                                 false
                             )
-                            video.setField(
+                            video.setFieldOrNull(
                                 packageInstance.video.hasSuffixWaterMark(),
                                 false
                             )
@@ -139,7 +139,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
     }
 
     private fun installDisableSaveImageToVideoLocalWaterMaskHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
-        packageInstance.abTestServiceImpl.selfClass?.resolveMethod(
+        packageInstance.abTestServiceImpl.selfClass?.resolveMethodOrNull(
             packageInstance.abTestServiceImpl.enableSaveImageToVideoLocalWaterMask()
         )?.hook {
             before {
@@ -158,13 +158,13 @@ object FeedMultiImageHooker : YukiBaseHooker() {
         }
 
     private fun installConvertVvicCoverImageToPngHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.downloadLivePhotoExecutor.selfClass?.resolveMethod(
+        return packageInstance.downloadLivePhotoExecutor.selfClass?.resolveMethodOrNull(
             packageInstance.downloadLivePhotoExecutor.encodeLivePhoto()
         )?.hook {
             before {
                 val downloadTask = args[0] ?: return@before
 
-                val vvicImagePathList = downloadTask.invokeMethod<List<String?>>(
+                val vvicImagePathList = downloadTask.invokeMethodOrNull<List<String?>>(
                     packageInstance.absTask.getTargetFilePaths()
                 )?.filterNotNull()?.filter {
                     it.isNotBlank() && File(it).exists() && FileTypeDetector.detect(it).mimeType == "image/vvic"
@@ -191,7 +191,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
     }
 
     private fun installDisableVEAddLiveVideoWaterMarkHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
-        packageInstance.abTestServiceImpl.selfClass?.resolveMethod(
+        packageInstance.abTestServiceImpl.selfClass?.resolveMethodOrNull(
             packageInstance.abTestServiceImpl.enableVEAddLiveVideoWaterMark()
         )?.hook {
             before {
@@ -210,13 +210,13 @@ object FeedMultiImageHooker : YukiBaseHooker() {
         }
 
     private fun installConvertVvicImageToPngHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.downLoadExecutor.selfClass?.resolveMethod(
+        return packageInstance.downLoadExecutor.selfClass?.resolveMethodOrNull(
             packageInstance.downLoadExecutor.execute()
         )?.hook {
             before {
                 val downloadTask = args[0] ?: return@before
 
-                val imageFilePath = downloadTask.invokeMethod<List<String?>>(
+                val imageFilePath = downloadTask.invokeMethodOrNull<List<String?>>(
                     packageInstance.absTask.getTargetFilePaths()
                 )?.filterNotNull()?.filter {
                     it.isNotBlank() && File(it).exists() && FileTypeDetector.detect(it).mimeType == "image/vvic"
@@ -242,7 +242,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
     }
 
     private fun installConvertSingleVvicImageToMp4Hook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.storyServiceImpl.selfClass?.resolveMethod(
+        return packageInstance.storyServiceImpl.selfClass?.resolveMethodOrNull(
             packageInstance.storyServiceImpl.convertImgToMp4()
         )?.hook {
             before {
@@ -274,7 +274,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
     }
 
     private fun installConvertMultiVvicImagesToMp4Hook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.storyServiceImpl.selfClass?.resolveMethod(
+        return packageInstance.storyServiceImpl.selfClass?.resolveMethodOrNull(
             packageInstance.storyServiceImpl.convertSingleLivePhotoToMp4UseMusicUrl()
         )?.hook {
             before {
@@ -332,7 +332,7 @@ object FeedMultiImageHooker : YukiBaseHooker() {
             return false
         }
 
-        val bitmap = packageInstance.heif.selfClass?.invokeStaticMethod<Any>(
+        val bitmap = packageInstance.heif.selfClass?.invokeStaticMethodOrNull<Any>(
             packageInstance.heif.toRgba(),
             /* vvicBytes = */
             imageBytes,
@@ -364,11 +364,11 @@ object FeedMultiImageHooker : YukiBaseHooker() {
             -1,
             /* fixVvicDecode = */
             true
-        )?.invokeMethod<Any>(
+        )?.invokeMethodOrNull<Any>(
             packageInstance.heifData.newBitmap(),
             null,
             Bitmap.Config.ARGB_8888
-        )?.invokeMethod<Bitmap>(
+        )?.invokeMethodOrNull<Bitmap>(
             packageInstance.closeableReference.get()
         )
         if (bitmap == null) {

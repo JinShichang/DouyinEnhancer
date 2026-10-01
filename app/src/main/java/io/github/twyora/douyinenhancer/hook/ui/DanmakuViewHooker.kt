@@ -8,7 +8,7 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object DanmakuViewHooker : YukiBaseHooker() {
@@ -37,7 +37,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     }
 
     private fun installAssignDanmakuViewIdHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.danmakuView.selfClass?.resolveMethod(
+        return packageInstance.danmakuView.selfClass?.resolveMethodOrNull(
             packageInstance.danmakuView.onAttachedToWindow()
         )?.hook {
             after {
@@ -70,7 +70,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     }
 
     private fun installAddDanmakuViewIdToCleanModeWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.cleanModePresenter.selfClass?.resolveMethod(
+        return packageInstance.cleanModePresenter.selfClass?.resolveMethodOrNull(
             packageInstance.cleanModePresenter.enterCleanMode()
         )?.hook {
             before {
@@ -103,7 +103,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     }
 
     private fun installBlockDanmakuViewHidingHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.cleanModePresenter.selfClass?.resolveMethod(
+        return packageInstance.cleanModePresenter.selfClass?.resolveMethodOrNull(
             packageInstance.cleanModePresenter.setVisibility()
         )?.hook {
             before {
