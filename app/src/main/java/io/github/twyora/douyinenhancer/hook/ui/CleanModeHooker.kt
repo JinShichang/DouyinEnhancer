@@ -1,6 +1,6 @@
 package io.github.twyora.douyinenhancer.hook.ui
 
-import android.view.View
+import android.app.Activity
 import com.highcapable.kavaref.extension.createInstance
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
@@ -26,7 +26,6 @@ object CleanModeHooker : YukiBaseHooker() {
     private var activeCommand: Any? = null
     private var exitCommand: Any? = null
     private var refreshing = false
-    private var commentRevision = 0
 
     override fun onHook() {
         if (!ConfigManager.ui.cleanMode.value) return
@@ -51,28 +50,6 @@ object CleanModeHooker : YukiBaseHooker() {
             onHookingFailure { error -> YLog.error("$TAG: player state hook failed", error) }
         }
         hookState(panel, packageInstance.baseListFragmentPanel.handlePause(), CleanModePlaybackState.Event.PAUSE)
-        panel.resolveMethod(NativeCleanModeSymbols.commentShowing)?.hook {
-            after {
-                if (panelRef.get() !== instance) return@after
-                val revision = ++commentRevision
-                if (args[0] != false) return@after
-                val owner = WeakReference(instance)
-                val view = instance.invokeMethod<Any>(NativeCleanModeSymbols.getFragment)
-                    ?.invokeMethod<View>(NativeCleanModeSymbols.fragmentView) ?: return@after
-                // Run once after the host's synchronous dismissal callbacks restore its chrome.
-                view.post {
-                    runCatching {
-                        val current = owner.get()
-                        if (current != null && panelRef.get() === current && commentRevision == revision && playback.clean) {
-                            refresh(current)
-                        }
-                    }.onFailure { YLog.error("$TAG: comment dismissal refresh failed", it) }
-                }
-            }
-        }?.result {
-            onConductFailure { _, error -> YLog.error("$TAG: comment state update failed", error) }
-            onHookingFailure { error -> YLog.error("$TAG: comment state hook failed", error) }
-        }
         panel.resolveMethod(NativeCleanModeSymbols.spacePolicy)?.hook {
             after {
                 // This predicate is consumed only by the native top/bottom spacer layout policy.
@@ -127,6 +104,15 @@ object CleanModeHooker : YukiBaseHooker() {
 
     private fun isLive(panel: Any): Boolean = panel.invokeMethod<Any>(NativeCleanModeSymbols.getCurrentAweme)
         ?.invokeMethod<Boolean>(NativeCleanModeSymbols.isLive) == true
+
+    internal fun ownsCleanMode(activity: Activity): Boolean {
+        if (exitCommand == null || !playback.clean) return false
+        val panel = panelRef.get() ?: return false
+        if (panel.invokeMethod<Boolean>(NativeCleanModeSymbols.userVisible) != true) return false
+        val fragment = fragmentRef.get() ?: return false
+        return fragment.invokeMethod<Boolean>(NativeCleanModeSymbols.fragmentAdded) == true &&
+            fragment.invokeMethod<Activity>(NativeCleanModeSymbols.fragmentActivity) === activity
+    }
 
     private fun update(panel: Any, event: CleanModePlaybackState.Event, reapply: Boolean = false) {
         if (panel.invokeMethod<Boolean>(NativeCleanModeSymbols.userVisible) != true) return
@@ -203,13 +189,13 @@ object CleanModeHooker : YukiBaseHooker() {
         // Clear ownership first to make cleanup safe during nested native notifications.
         exitCommand = null
         activeCommand = null
-        commentRevision++
         fragmentRef.clear()
         try {
             if (fragment != null && fragment.invokeMethod<Boolean>(NativeCleanModeSymbols.fragmentAdded) == true) {
                 toggle(fragment, eventType, command)
             }
         } finally {
+            CleanModeChromeHooker.restoreSuppressed()
             panelRef.get()?.let(::adapt)
         }
     }

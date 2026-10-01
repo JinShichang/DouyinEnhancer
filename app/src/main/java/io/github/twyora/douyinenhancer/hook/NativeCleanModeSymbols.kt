@@ -26,8 +26,7 @@ internal object NativeCleanModeSymbols {
     val onDestroyView = Method("onDestroyView", emptyList())
     val scrollState = Method("onPageScrollStateChanged", listOf("int"))
     val fragmentAdded = Method("isAdded", emptyList())
-    val fragmentView = Method("getView", emptyList())
-    val commentShowing = Method("setCommentDialogShowing", listOf("boolean"))
+    val fragmentActivity = Method("getActivity", emptyList())
 
     fun resolve(bridge: DexKitBridge): Configs.NativeCleanMode {
         val command = bridge.findClass {

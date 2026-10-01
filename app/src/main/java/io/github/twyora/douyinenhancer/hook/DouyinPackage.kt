@@ -120,6 +120,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     val videoPlayerStatus = VideoPlayerStatusModule(hookInfo.videoPlayerStatus, classLoader)
     val videoEvent = VideoEventModule(hookInfo.videoEvent, classLoader)
     val cleanModePresenter = CleanModePresenterModule(hookInfo.cleanModePresenter, classLoader)
+    val cleanModeChrome = CleanModeChromeModule(hookInfo.cleanModeChrome, classLoader)
     val nativeCleanMode = NativeCleanModeModule(hookInfo.nativeCleanMode, classLoader)
     val danmakuView = DanmakuViewModule(hookInfo.danmakuView, classLoader)
     val fluxComponentId = FluxComponentIdModule(hookInfo.fluxComponentId, classLoader)
@@ -943,6 +944,18 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun inverse() = Method(configs.inverse.nameOrNull, emptyList())
         fun autoQuit() = Field(configs.autoQuit.nameOrNull)
         fun content() = Field(configs.content.nameOrNull)
+    }
+
+    class CleanModeChromeModule internal constructor(private val configs: Configs.CleanModeChrome, private val classLoader: ClassLoader) {
+        val topViewClass by weak { configs.topViewClass.nameOrNull?.toClass(classLoader) }
+        val bottomViewClass by weak { configs.bottomViewClass.nameOrNull?.toClass(classLoader) }
+        val uiServiceClass by weak { configs.uiServiceClass.nameOrNull?.toClass(classLoader) }
+        fun applyTopVisibility() = Method(configs.applyTopVisibility.nameOrNull, configs.applyTopVisibility.parameters.valuesListOrNull)
+        fun applyBottomVisibility() =
+            Method(configs.applyBottomVisibility.nameOrNull, configs.applyBottomVisibility.parameters.valuesListOrNull)
+        fun uiServiceInstance() = Field(configs.uiServiceInstance.nameOrNull)
+        fun topContainerId() = Method(configs.topContainerId.nameOrNull, emptyList())
+        fun topShadowId() = Method(configs.topShadowId.nameOrNull, emptyList())
     }
 
     class CleanModePresenterModule internal constructor(
@@ -3288,6 +3301,12 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     nativeCleanMode = NativeCleanModeSymbols.resolve(bridge)
                 }.onFailure {
                     YLog.error("$TAG: failed to resolve native clean mode", it)
+                }
+
+                runCatching {
+                    cleanModeChrome = NativeCleanModeChromeSymbols.resolve(bridge)
+                }.onFailure {
+                    YLog.error("$TAG: failed to resolve clean mode chrome protection", it)
                 }
 
                 cleanModePresenter = cleanModePresenter {

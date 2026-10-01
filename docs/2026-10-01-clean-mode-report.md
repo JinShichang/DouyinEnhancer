@@ -66,6 +66,22 @@ r3 的实机验收需覆盖：打开抖音自身弹幕开关后，冷启动首�
 
 r3 验证：`spotlessKotlinCheck`、8 项 `testAppDebugUnitTest`（0 失败/0 错误）、Debug/Release 构建及 Release lintVital 均通过；`git diff --check` 通过。外层 `artifacts/DouyinEnhancer_0.13.1-cleanmode-r3.apk` 的 v2 签名验证通过，与 r2 使用相同 Android Debug 证书，可覆盖升级。APK SHA-256 为 `835c2da5187a03fc30e248654292c4904c550d13abf34e91fe381181fc0b1dfb`。安装后强制停止并重新打开抖音，使新 Hook 和新映射生效。源码同步保持原有 GitHub 工作流，提交使用 `[skip ci]`，不推送标签或发布 GitHub Release。
 
+## r4：以最终渲染约束评论关闭后的主页栏
+
+用户确认 r3 弹幕正常，但收起评论后上下栏仍半透明，需暂停/继续或切换视频才消失。r3 评论修复未通过实机验收，下面的改动替代其单次 View.post 刷新。r4 版本为 `0.13.1-cleanmode-r4`，versionCode 为 1305。
+
+38.8.0 的 `MFBarContainerComponent.en0` 向 `VisibilityControlledFrameLayout` 和 `TopShadowViewProxy` 提交优先级显隐请求；最终由 `LJ(int, boolean)` 调用 `super.setVisibility` 或启动显隐动画。`MPFBottomTabComponent.Cp1` 可排队执行底栏请求，`MainBottomTabViewNew.LJIIJ` 再交给优先级管理器，最终由 `LJIIJJI(int)` 应用显隐。这些后续请求不受 r3 单次刷新持续约束。参考文件在外层 `reference/douyin-38.8.0`，包括上述四个类的反编译代码。
+
+r4 新增独立 `CleanModeChromeHooker`，只在本模块清爽命令持有且页面可见、fragment 已附着、Activity 相同的情况下，将主页栏最终 VISIBLE 渲染改为 GONE；顶部关闭该次显示动画。顶部和阴影 ID 从宿主 HomePageUIService 获取，底栏限定专用类。DexKit 通过顶部日志字符串与底栏 setHasFixSize 调用关系唯一定位最终渲染方法，映射存入新增 HookInfo.CleanModeChrome。不会改变宿主优先级请求表，不使用全局视图显隐 Hook 或固定资源 ID。
+
+被拦住且仍为最新意图的显示请求以弱引用保存。暂停或离开时先交还所有权并执行原生撤销，之后恢复尚未被原生再次渲染的待显示请求；更晚的隐藏请求会取消待显示记录。移除 r3 评论通知 Hook 和 View.post，保留真实播放/选页的原生命令重申。弹幕实现未修改。
+
+当前维护结论和逐版本验收要求见 [维护与兼容性审查](clean-mode-maintainability.md)。r4 的设备行为仍需验证，不能因构建通过直接标记评论问题已验收。
+
+r4 验证：格式检查、8 项播放状态测试（0 失败/0 错误）、Debug/Release 构建和 Release lintVital 均通过，`git diff --check` 通过。生成的 HookerRegistry 已包含 CleanModeChromeHooker；38.8.0 classes37.dex 的类定义和方法表确认 HomePageUIService.INSTANCE 及两个无参 int ID getter。Release APK v2 签名验证通过，证书与 r3 相同；外层 `artifacts/DouyinEnhancer_0.13.1-cleanmode-r4.apk` 的 SHA-256 为 `e756405c66f5b5b246b77a9f08126aaf401144abc073fe6f522e76034c864102`。ADB 无连接设备。
+
+安装后强制停止并重新打开抖音。重点测试播放中连续开关评论（返回键和下滑），关闭后上下栏继续隐藏、弹幕仍显示；再测试暂停时开关评论、继续播放、离开主页及切后台，确认正常操作与恢复。源码继续保留 GitHub 当前工作流，使用 `[skip ci]`，不发布 GitHub Release。
+
 ## 首轮构建与测试
 
 使用项目的 Java 21、Gradle 9.4.1 和现有依赖。普通环境可通过 Gradle Wrapper 构建：

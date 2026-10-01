@@ -385,6 +385,17 @@ message DanmakuView {
   optional Method create_container = 4;
 }
 
+message CleanModeChrome {
+  optional Class top_view_class = 1;
+  optional Method apply_top_visibility = 2;
+  optional Class bottom_view_class = 3;
+  optional Method apply_bottom_visibility = 4;
+  optional Class ui_service_class = 5;
+  optional Field ui_service_instance = 6;
+  optional Method top_container_id = 7;
+  optional Method top_shadow_id = 8;
+}
+
 message Heif {
   optional Class class = 1;
   optional Method to_rgba = 2;
@@ -467,6 +478,7 @@ message HookInfo {
   optional AbsTask abs_task = 62;
   optional VideoPlayerStatus video_player_status = 63;
   optional NativeCleanMode native_clean_mode = 64;
+  optional CleanModeChrome clean_mode_chrome = 65;
 
   reserved 13, 18, 32, 35, 36, 38, 39, 40, 55;
 }
