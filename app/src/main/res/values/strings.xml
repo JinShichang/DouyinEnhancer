@@ -129,6 +129,14 @@
     <string name="playback_component_block_ai_co_creators_three">✦ AI Duet Creator Avatar</string>
     <string name="playback_component_block_aigc_cocreate_status_title">✦ AI Co-Creation Tag</string>
 
+    <string name="bottom_tab_block_dialog_title">Hide Bottom Navigation Items</string>
+    <string name="bottom_tab_main_switch_title">Master Switch</string>
+    <string name="bottom_tab_main_switch_summary">Enable to configure hiding of bottom navigation entries</string>
+    <string name="bottom_tab_hide_homepage_home">Home</string>
+    <string name="bottom_tab_hide_homepage_mall">Mall</string>
+    <string name="bottom_tab_hide_homepage_publish">Publish Button</string>
+    <string name="bottom_tab_hide_homepage_notification">Messages</string>
+    <string name="bottom_tab_hide_homepage_profile">Profile</string>
 
     <string name="pref_category_backup">Backup &amp; Restore</string>
     <string name="pref_backup_export_title">Export Config</string>

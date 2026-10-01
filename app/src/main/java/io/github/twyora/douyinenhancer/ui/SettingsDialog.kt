@@ -101,6 +101,7 @@ class SettingsDialog(context: Context) :
 
             findPreference("recommend_feed_filter")?.onPreferenceClickListener = this
             findPreference("playback_component_block")?.onPreferenceClickListener = this
+            findPreference("bottom_tab_block")?.onPreferenceClickListener = this
             findPreference("export_config")?.onPreferenceClickListener = this
             findPreference("import_config")?.onPreferenceClickListener = this
             (findPreference("disable_verbose_logs") as? SwitchPreference)?.apply {
@@ -133,6 +134,11 @@ class SettingsDialog(context: Context) :
 
             "playback_component_block" -> {
                 PlaybackComponentBlockDialog(context).show()
+                true
+            }
+
+            "bottom_tab_block" -> {
+                BottomTabBlockDialog.show(context)
                 true
             }
 

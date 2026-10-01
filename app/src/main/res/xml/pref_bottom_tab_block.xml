@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_main_switch"
+        android:summary="@string/bottom_tab_main_switch_summary"
+        android:title="@string/bottom_tab_main_switch_title" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_home"
+        android:title="@string/bottom_tab_hide_homepage_home" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_mall"
+        android:title="@string/bottom_tab_hide_homepage_mall" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_publish"
+        android:title="@string/bottom_tab_hide_homepage_publish" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_notification"
+        android:title="@string/bottom_tab_hide_homepage_notification" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_profile"
+        android:title="@string/bottom_tab_hide_homepage_profile" />
+
+</PreferenceScreen>
