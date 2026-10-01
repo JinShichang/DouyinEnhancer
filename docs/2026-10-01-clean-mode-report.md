@@ -4,9 +4,9 @@
 
 ## 范围与上游
 
-本次工作由项目所有者授权：重构已有清爽模式、整理本地目录并同步上游。分析仅使用已有本地 APK 参考文件与公开上游代码/PR 评论。没有发布代码、推送分支或安装到设备。
+本次工作由项目所有者授权：重构已有清爽模式、整理本地目录、同步上游并将源码同步到个人 GitHub 仓库。分析仅使用已有本地 APK 参考文件与公开上游代码/PR 评论。r2 已推送到个人仓库 main，按用户选择保留该仓库原有工作流；没有发布 GitHub Release 或安装到设备。
 
-已合并上游 `twyora/DouyinEnhancer` main 的 `a38a76a7d1bdb901da2d7346a3d82b17d6886136`（v0.13.1），合并提交为 `4b0f7fe`。保留上游分别处理双击点赞和双击评论的 Hook，清爽模式配置迁移到 `ConfigManager.ui.cleanMode`，继续使用原来的 `clean_mode_main_switch` 存储键。首轮版本为 `0.13.1-cleanmode`，versionCode 为 1302；当前 r2 的 versionCode 为 1303。
+已合并上游 `twyora/DouyinEnhancer` main 的 `a38a76a7d1bdb901da2d7346a3d82b17d6886136`（v0.13.1），合并提交为 `4b0f7fe`。保留上游分别处理双击点赞和双击评论的 Hook，清爽模式配置迁移到 `ConfigManager.ui.cleanMode`，继续使用原来的 `clean_mode_main_switch` 存储键。首轮版本为 `0.13.1-cleanmode`，versionCode 为 1302；r2 的 versionCode 为 1303；r3 为 `0.13.1-cleanmode-r3`，versionCode 为 1304。
 
 作者在 [PR #128 的回复](https://github.com/twyora/DouyinEnhancer/pull/128#issuecomment-5811217214) 中提出职责拆分、减少硬编码与试探、记录异常堆栈以及优先从数据层切入。本次按这些建议调整实现。
 
@@ -43,6 +43,28 @@
 r2 的格式检查、8 项状态测试（0 失败/0 错误）、Debug/Release 构建及 Release lintVital 均通过。新增测试覆盖旧视频暂停后进入直播、直播切回视频后暂停，以及离开直播后的状态重置。运行时截图验收仍由设备测试确认。
 
 r2 Release APK 位于外层 `artifacts/DouyinEnhancer_0.13.1-cleanmode-r2.apk`。包名与上一轮相同，签名证书 SHA-256 仍为 `e754c0d2f2070f84a24863c7435e64a8024522962289a1e08b6132e81b3319b9`，可以覆盖上一轮安装包。`apksigner verify` 通过；APK SHA-256 为 `29a95ca4c6c18f092e590e349500b56e8f2ca6a1d279840bf69ac37bb5fd72c0`。安装后强制停止并重新打开抖音，使新 Hook 生效。
+
+## r3：播放时保留弹幕
+
+用户实测反馈：暂停时能看到弹幕，但全屏播放进入清爽模式后弹幕消失。38.8.0 的 `jadx-classes7/sources/com/ss/android/ugc/aweme/feed/danmaku/ultra/DanmakuModule.java` 包含传统 `Presenter` 和 `DDanmakuPresenter` 两种实现，后者使用 `DDanmakuComposeView`。两者都使用 `DanmakuModule.onCreateView(Context, ViewGroup)` 创建的专用 `FrameLayout`。旧 Hook 仅在传统 `DanmakuView.onAttachedToWindow` 收集 ID，遗漏 Compose 渲染器，并依赖渲染器已经附着的时机。
+
+r3 在专用容器创建后立即分配 ID 并登记，原生 `CleanModePresenter.i0` 白名单在清屏前保留整个弹幕模块，不再依赖渲染器类型或附着时机。传统渲染器的登记保留用于其他弹幕入口。无 ID 的视图各自使用独立生成的 ID；登记使用视图弱引用，避免持有已销毁页面，也避免旧 ID 集合持续累积。容器类和方法记录在 HookInfo 的 `DanmakuView` 映射中，升级模块版本会重新生成缓存。
+
+`CleanModePresenter.i0` 对滑出容器 `l` 直接调用 `h0(View, int, int, boolean)`，没有对它调用白名单遍历；`s0` 随后会将这个共享容器平移到屏幕外并延迟隐藏。因此只扩充白名单仍不足以修复弹幕。r3 在宿主处理包含已登记弹幕的容器时，调用宿主自己的 `q0(View, List)` 分解为需要隐藏的兄弟控件，再将这些控件交给原有 `h0`，保留其优先级和退出恢复策略。没有阻止整个共享祖先隐藏后就直接放过兄弟控件。`h0` 通过参数签名及日志字符串定位，`q0` 通过静态方法签名定位，均缓存在 `CleanModePresenter` 映射中；没有固定资源 ID 或全局 View.setVisibility 拦截。
+
+此改动只扩充原生清屏白名单，不强制打开用户关闭的弹幕、不恢复共享祖先控件，也不改变暂停/恢复播放、系统栏和底栏布局逻辑。参考 `FeedDanmakuPresenter.java` 与 `AObjectS272S0100000_1.java` 已补充到外层参考目录，用于核对弹幕外层 presenter 的布局逻辑。
+
+r3 的实机验收需覆盖：打开抖音自身弹幕开关后，冷启动首个视频、切换视频、连续暂停/恢复时，清爽播放仍显示弹幕；关闭抖音弹幕开关后仍保持关闭；其他控件仍按暂停/播放切换显隐。还需检查弹幕发送、听抖音入口及仅开启“清屏不隐藏弹幕”的原生手动清屏路径。本机未连接设备，静态分析与编译不能替代这些运行时验收。
+
+## r3：关闭评论后保持清屏
+
+用户实测双击打开再关闭评论后，顶部和底部主页控件以半透明方式重新出现。`jadx-classes30/sources/X/C10330xpM.java` 的 `LK1` 按 caller 去重，已存在的开启命令会直接返回；此前对同一命令调用 `toggleCleanMode` 无法重新通知控件。r3 将重新应用改为通过原生服务先提交本模块的反向命令，再提交开启命令，在同一个 UI 调用中更新 holder 和 non-holder 观察者；重入保护避免刷新回调递归，不撤销其他 caller 的命令。
+
+`BaseListFragmentPanel.setCommentDialogShowing(false)` 是评论关闭通知路径的一部分，`C0OBg.onCommentDialogEvent` 与 `CommentComponent.onCommentDialogEvent` 在其后还执行宿主恢复操作。r3 在该通知后使用 View.post 排队一次刷新，等同步关闭通知完成；不使用延迟轮询或反复定时隐藏。刷新检查 panel 所有权、评论通知序号、真实播放状态、页面可见性和 fragment 生命周期，避免过期任务影响已退出的页面。真实播放事件 2/3 和切换视频也使用同一刷新逻辑。评论关闭时若视频仍暂停，不会主动开始播放或误隐藏暂停控件。
+
+实机需反复双击打开评论、关闭评论（返回键和下滑两种方式），确认顶部/底部主页控件不残留、全屏继续播放且弹幕仍可见；另测暂停后打开/关闭评论，以及评论关闭前切后台、重新打开评论或离开页面。
+
+r3 验证：`spotlessKotlinCheck`、8 项 `testAppDebugUnitTest`（0 失败/0 错误）、Debug/Release 构建及 Release lintVital 均通过；`git diff --check` 通过。外层 `artifacts/DouyinEnhancer_0.13.1-cleanmode-r3.apk` 的 v2 签名验证通过，与 r2 使用相同 Android Debug 证书，可覆盖升级。APK SHA-256 为 `835c2da5187a03fc30e248654292c4904c550d13abf34e91fe381181fc0b1dfb`。安装后强制停止并重新打开抖音，使新 Hook 和新映射生效。源码同步保持原有 GitHub 工作流，提交使用 `[skip ci]`，不推送标签或发布 GitHub Release。
 
 ## 首轮构建与测试
 

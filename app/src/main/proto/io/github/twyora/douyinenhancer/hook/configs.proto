@@ -364,6 +364,8 @@ message CleanModePresenter {
   optional Class class = 1;
   optional Method enter_clean_mode = 2;
   optional Method set_visibility = 3 [deprecated = true];
+  optional Method handle_view = 4;
+  optional Method collect_hidden_views = 5;
 }
 
 message NativeCleanMode {
@@ -379,6 +381,8 @@ message NativeCleanMode {
 message DanmakuView {
   optional Class class = 1;
   optional Method on_attached_to_window = 2;
+  optional Class container_class = 3;
+  optional Method create_container = 4;
 }
 
 message Heif {

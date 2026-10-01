@@ -1,5 +1,6 @@
 package io.github.twyora.douyinenhancer.hook.ui
 
+import android.view.View
 import com.highcapable.kavaref.extension.createInstance
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
@@ -24,6 +25,8 @@ object CleanModeHooker : YukiBaseHooker() {
     private var eventType = ""
     private var activeCommand: Any? = null
     private var exitCommand: Any? = null
+    private var refreshing = false
+    private var commentRevision = 0
 
     override fun onHook() {
         if (!ConfigManager.ui.cleanMode.value) return
@@ -38,7 +41,7 @@ object CleanModeHooker : YukiBaseHooker() {
                 val code = checkNotNull(args[0]).getField<Int>(packageInstance.videoPlayerStatus.code())
                 when (code) {
                     NativeCleanModeSymbols.PLAYER_STARTED, NativeCleanModeSymbols.PLAYER_RESUMED ->
-                        update(instance, CleanModePlaybackState.Event.PLAY)
+                        update(instance, CleanModePlaybackState.Event.PLAY, reapply = true)
 
                     NativeCleanModeSymbols.PLAYER_PAUSED -> update(instance, CleanModePlaybackState.Event.PAUSE)
                 }
@@ -48,6 +51,28 @@ object CleanModeHooker : YukiBaseHooker() {
             onHookingFailure { error -> YLog.error("$TAG: player state hook failed", error) }
         }
         hookState(panel, packageInstance.baseListFragmentPanel.handlePause(), CleanModePlaybackState.Event.PAUSE)
+        panel.resolveMethod(NativeCleanModeSymbols.commentShowing)?.hook {
+            after {
+                if (panelRef.get() !== instance) return@after
+                val revision = ++commentRevision
+                if (args[0] != false) return@after
+                val owner = WeakReference(instance)
+                val view = instance.invokeMethod<Any>(NativeCleanModeSymbols.getFragment)
+                    ?.invokeMethod<View>(NativeCleanModeSymbols.fragmentView) ?: return@after
+                // Run once after the host's synchronous dismissal callbacks restore its chrome.
+                view.post {
+                    runCatching {
+                        val current = owner.get()
+                        if (current != null && panelRef.get() === current && commentRevision == revision && playback.clean) {
+                            refresh(current)
+                        }
+                    }.onFailure { YLog.error("$TAG: comment dismissal refresh failed", it) }
+                }
+            }
+        }?.result {
+            onConductFailure { _, error -> YLog.error("$TAG: comment state update failed", error) }
+            onHookingFailure { error -> YLog.error("$TAG: comment state hook failed", error) }
+        }
         panel.resolveMethod(NativeCleanModeSymbols.spacePolicy)?.hook {
             after {
                 // This predicate is consumed only by the native top/bottom spacer layout policy.
@@ -122,8 +147,7 @@ object CleanModeHooker : YukiBaseHooker() {
             enter(fragment, checkNotNull(panel.invokeMethod<String>(NativeCleanModeSymbols.getEventType)))
             adapt(panel)
         } else if (playback.clean && reapply) {
-            toggle(fragment, eventType, checkNotNull(activeCommand))
-            adapt(panel)
+            refresh(panel)
         } else if (!playback.clean) {
             leave()
         }
@@ -132,6 +156,25 @@ object CleanModeHooker : YukiBaseHooker() {
     private fun adapt(panel: Any) {
         panel.invokeMethod<Any>(NativeCleanModeSymbols.updateSpaces)
         panel.invokeMethod<Any>(NativeCleanModeSymbols.adapt)
+    }
+
+    private fun refresh(panel: Any) {
+        if (refreshing || panelRef.get() !== panel || !playback.clean) return
+        if (panel.invokeMethod<Boolean>(NativeCleanModeSymbols.userVisible) != true) return
+        val fragment = fragmentRef.get() ?: return
+        if (fragment.invokeMethod<Boolean>(NativeCleanModeSymbols.fragmentAdded) != true) return
+        val command = activeCommand ?: return
+        val inverse = exitCommand ?: return
+        // The native executor drops duplicate caller entries. Withdraw and resubmit through
+        // its public API to notify both holder and non-holder observers in the same UI turn.
+        refreshing = true
+        try {
+            toggle(fragment, eventType, inverse)
+            if (activeCommand === command && playback.clean) toggle(fragment, eventType, command)
+        } finally {
+            refreshing = false
+            if (panelRef.get() === panel) adapt(panel)
+        }
     }
 
     private fun enter(fragment: Any, type: String) {
@@ -160,6 +203,7 @@ object CleanModeHooker : YukiBaseHooker() {
         // Clear ownership first to make cleanup safe during nested native notifications.
         exitCommand = null
         activeCommand = null
+        commentRevision++
         fragmentRef.clear()
         try {
             if (fragment != null && fragment.invokeMethod<Boolean>(NativeCleanModeSymbols.fragmentAdded) == true) {
