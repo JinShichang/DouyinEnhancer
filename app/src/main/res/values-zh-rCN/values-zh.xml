@@ -152,6 +152,13 @@
     <string name="pref_module_disable_verbose_logs_title">禁用详细日志</string>
     <string name="pref_module_disable_verbose_logs_summary">报告问题要求包含详细日志</string>
 
+    <string name="pref_module_invalid_hook_info_title">重置混淆映射表</string>
+    <string name="pref_module_invalid_hook_info_summary">这将迫使模块重新搜索方法以重建混淆映射表</string>
+    <string name="pref_module_load_custom_hook_info_title">加载自定义混淆映射表</string>
+    <string name="pref_module_reset_custom_hook_info_title">清除自定义混淆映射表</string>
+    <string name="load_custom_hook_info_chooser">选择自定义的混淆映射表</string>
+    <string name="untrusted_obfuscation_map">不可信的混淆映射表</string>
+
     <string name="verify_dialog_title">验证</string>
     <string name="verify_dialog_description">模块仅在 GitHub 发布！为了尊重开发者的劳动成果，请输入模块下载地址进行验证。使用前请认真阅读仓库 README。</string>
     <string name="verify_dialog_input_hint">GitHub 地址</string>
@@ -173,13 +180,17 @@
     <string name="pref_about_telegram_summary">点击加入 TG 频道</string>
     <string name="pref_about_build_time_title">构建时间</string>
     <string name="pref_about_back_then_title">作者当时🎵</string>
-    <string name="pref_about_back_then_summary">惟愿执长剑，孤身入人烟\n悯 芸芸众生 有情念\n是耶非焉，道无言，梦大千\n今我流连，浮光浅，照心鉴\n与君问剑，清万籁，荡玄天\n并肩回看 灯火翩\n蓦然见 长风昭人间🎵</string>
+    <string name="pref_about_back_then_summary">西风牵老马 载我过人家\n两袖结云霞 风尘来下榻\n我心怀不大 烦恼装不下\n无愁亦无忧啊 自称逍遥侠🎵</string>
 
+    <string name="success">成功</string>
+    <string name="failed">失败</string>
     <string name="add">添加</string>
     <string name="delete">删除</string>
     <string name="unknown">未知</string>
     <string name="regex_mode">正则模式</string>
     <string name="save_success_restart_required">保存成功，部分配置重启应用后生效</string>
+    <string name="import_success_restart_required">导入成功，部分配置重启应用后生效</string>
+    <string name="import_failed">导入失败: %s</string>
     <string name="restart_required">部分功能需重启应用后生效</string>
     <string name="notify_update_available">抖柚更新啦</string>
     <string name="save_failed_invalid_bounds">保存失败，上下限设置错误</string>
@@ -196,4 +207,6 @@
     <string name="pref_category_clean_mode">清爽模式</string>
     <string name="pref_clean_mode_main_title">清爽模式(防烧屏模式 OLED救星)</string>
     <string name="pref_clean_mode_main_summary">播放视频时隐藏顶部标签、底部导航、右侧互动栏、作者与文案等全部悬浮控件，仅保留视频画面与进度条；暂停时自动恢复显示，继续播放后再次隐藏（防 OLED 烧屏）</string>
+    <string name="pref_settings_main_help_title">帮助</string>
+    <string name="pref_settings_main_help_summary">点击查看完整文档、使用指南与常见问题</string>
 </resources>

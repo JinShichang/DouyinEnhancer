@@ -9,4 +9,5 @@
         <item>github.com/twyora/DouyinEnhancer</item>
         <item>github.com/Xposed-Modules-Repo/io.github.twyora.douyinenhancer</item>
     </string-array>
+    <string name="docs_url">https://github.com/twyora/DouyinEnhancer/tree/main/docs</string>
 </resources>

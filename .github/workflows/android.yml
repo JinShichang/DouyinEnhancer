@@ -8,7 +8,7 @@ on:
     paths-ignore:
       - ".github/**"
       - "*.md"
-      - "doc/*"
+      - "docs/*"
       - "LICENSE"
 
 permissions:
@@ -31,6 +31,11 @@ jobs:
         with:
           java-version: "21"
           distribution: "temurin"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ startsWith(github.ref, 'refs/tags/') }}
 
       - name: Build with Gradle and Sign
         run: |

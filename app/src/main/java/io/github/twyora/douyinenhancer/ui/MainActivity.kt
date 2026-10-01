@@ -12,11 +12,11 @@ import android.os.Bundle
 import android.preference.Preference
 import android.preference.PreferenceFragment
 import android.preference.SwitchPreference
-import android.widget.Toast
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
+import io.github.twyora.douyinenhancer.utils.toast
 import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -61,8 +61,10 @@ class MainActivity : Activity() {
                 SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(BuildConfig.BUILD_TIMESTAMP)
             if (YukiHookAPI.Status.isModuleActive) {
                 val activationStatus = findPreference("activation_status")
-                activationStatus?.title = context.getString(R.string.pref_about_activation_status_activated_title)
-                activationStatus?.summary = context.getString(R.string.pref_about_activation_status_activated_summary)
+                activationStatus?.title =
+                    context.getString(R.string.pref_about_activation_status_activated_title)
+                activationStatus?.summary =
+                    context.getString(R.string.pref_about_activation_status_activated_summary)
             }
 
             checkUpdate()
@@ -105,13 +107,7 @@ class MainActivity : Activity() {
             return when (preference.key) {
                 "open_module_settings" -> {
                     if (!YukiHookAPI.Status.isModuleActive) {
-                        Toast.makeText(
-                            activity,
-                            activity.getString(
-                                R.string.pref_about_activation_status_deactivated_summary
-                            ),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        activity.toast(R.string.pref_about_activation_status_deactivated_summary)
                         return true
                     }
 
@@ -165,13 +161,7 @@ class MainActivity : Activity() {
                         }
                     } ?: context.getString(R.string.pref_about_update_available_summary)
                 }
-                activity.runOnUiThread {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.notify_update_available),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                activity.toast(R.string.notify_update_available)
             } else {
                 findPreference("update")?.apply {
                     title = context.getString(R.string.pref_about_up_to_date_title)

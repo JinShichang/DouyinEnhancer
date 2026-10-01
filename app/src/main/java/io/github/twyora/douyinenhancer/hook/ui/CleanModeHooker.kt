@@ -9,9 +9,7 @@ import android.widget.RelativeLayout
 import com.highcapable.yukihookapi.hook.core.YukiMemberHookCreator
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.twyora.douyinenhancer.config.FastKVConfigManager
-import io.github.twyora.douyinenhancer.config.key.CleanModeKey
-import io.github.twyora.douyinenhancer.config.key.ModuleKey
+import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.Method
@@ -39,7 +37,7 @@ object CleanModeHooker : YukiBaseHooker() {
         get() = DouyinPackage.instance
 
     private val verbose
-        get() = !FastKVConfigManager.module.getBoolean(ModuleKey.DISABLE_VERBOSE_LOGS, false)
+        get() = !ConfigManager.module.verboseDisabled.value
 
     // handleVideoEvent 的 videoType（内容流播放事件，兜底）
     private const val VIDEO_EVENT_TEXTURE_AVAILABLE = 0
@@ -177,7 +175,7 @@ object CleanModeHooker : YukiBaseHooker() {
     private var pagerDragging = false
 
     override fun onHook() {
-        if (!FastKVConfigManager.settings.getBoolean(CleanModeKey.MAIN_SWITCH, false)) {
+        if (!ConfigManager.ui.cleanMode.value) {
             if (verbose) {
                 YLog.debug("$TAG: clean mode disabled, skip hook")
             }

@@ -153,6 +153,13 @@
     <string name="pref_module_disable_verbose_logs_title">Disable verbose logs</string>
     <string name="pref_module_disable_verbose_logs_summary">Report issues request to include verbose logs</string>
 
+    <string name="pref_module_invalid_hook_info_title">Invalidate obfuscation mapping</string>
+    <string name="pref_module_invalid_hook_info_summary">This forces the module to re-search methods and rebuild the obfuscation mapping</string>
+    <string name="pref_module_load_custom_hook_info_title">Load custom obfuscation mapping</string>
+    <string name="pref_module_reset_custom_hook_info_title">Reset custom obfuscation mapping</string>
+    <string name="load_custom_hook_info_chooser">Choose custom obfuscation mapping</string>
+    <string name="untrusted_obfuscation_map">Untrusted obfuscation mapping</string>
+
     <string name="verify_dialog_title">Verification</string>
     <string name="verify_dialog_description">This module is released only on GitHub. To respect the developer’s work, enter the module download URL for verification. Please read the repository README carefully before use.</string>
     <string name="verify_dialog_input_hint">GitHub address</string>
@@ -175,12 +182,16 @@
     <string name="pref_about_build_time_title">Build Time</string>
     <string name="unknown">Unknown</string>
     <string name="pref_about_back_then_title">Back Then🎵</string>
-    <string name="pref_about_back_then_summary">惟愿执长剑，孤身入人烟\n悯 芸芸众生 有情念\n是耶非焉，道无言，梦大千\n今我流连，浮光浅，照心鉴\n与君问剑，清万籁，荡玄天\n并肩回看 灯火翩\n蓦然见 长风昭人间🎵</string>
+    <string name="pref_about_back_then_summary">西风牵老马 载我过人家\n两袖结云霞 风尘来下榻\n我心怀不大 烦恼装不下\n无愁亦无忧啊 自称逍遥侠🎵</string>
 
+    <string name="success">Success</string>
+    <string name="failed">Failed</string>
     <string name="add">Add</string>
     <string name="delete">Delete</string>
     <string name="regex_mode">Regex mode</string>
     <string name="save_success_restart_required">Saved successfully. Some configurations will take effect after restarting the app</string>
+    <string name="import_success_restart_required">Import successfully. Some configurations will take effect after restarting the app</string>
+    <string name="import_failed">Import failed: %s</string>
     <string name="restart_required">Some features will take effect after restarting the app</string>
     <string name="notify_update_available">Douyin Enhancer has an update</string>
 
@@ -196,4 +207,6 @@
     <string name="pref_category_clean_mode">Clean Mode</string>
     <string name="pref_clean_mode_main_title">Clean Mode (OLED anti burn-in)</string>
     <string name="pref_clean_mode_main_summary">While playing, hide top tabs, bottom navigation, the right action bar, author info and captions so only the video and the progress bar remain; pausing restores all controls and playback hides them again (OLED burn-in protection)</string>
+    <string name="pref_settings_main_help_title">Help</string>
+    <string name="pref_settings_main_help_summary">Tap to view full documentation, guides and FAQs</string>
 </resources>

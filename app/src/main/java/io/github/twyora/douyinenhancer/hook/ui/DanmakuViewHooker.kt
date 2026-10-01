@@ -5,9 +5,7 @@ import androidx.collection.ArraySet
 import com.highcapable.yukihookapi.hook.core.YukiMemberHookCreator
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.twyora.douyinenhancer.config.FastKVConfigManager
-import io.github.twyora.douyinenhancer.config.key.ModuleKey
-import io.github.twyora.douyinenhancer.config.key.UiKey
+import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.resolveMethod
@@ -20,14 +18,14 @@ object DanmakuViewHooker : YukiBaseHooker() {
         get() = DouyinPackage.instance
 
     private val verbose
-        get() = !FastKVConfigManager.module.getBoolean(ModuleKey.DISABLE_VERBOSE_LOGS, false)
+        get() = !ConfigManager.module.verboseDisabled.value
 
     private val danmakuViewIds = ArraySet<Int>().apply {
         add(View.generateViewId())
     }
 
     override fun onHook() {
-        if (!FastKVConfigManager.settings.getBoolean(UiKey.KEEP_DANMAKU_VISIBLE, false)) {
+        if (!ConfigManager.ui.keepDanmakuVisible.value) {
             if (verbose) {
                 YLog.debug("$TAG: keep danmaku visible disabled, skip danmaku hooks")
             }
@@ -76,9 +74,13 @@ object DanmakuViewHooker : YukiBaseHooker() {
             packageInstance.cleanModePresenter.enterCleanMode()
         )?.hook {
             before {
-                @Suppress("UNCHECKED_CAST")
-                val whiteList = args[4] as? MutableList<Int> ?: run {
-                    YLog.error("$TAG: ${args[4]?.javaClass?.name} is not a mutable list of int")
+                // The whiteList argument's position in the parameter list varies across host versions,
+                // resolve it at runtime
+                val whiteList = args.firstNotNullOfOrNull {
+                    @Suppress("UNCHECKED_CAST")
+                    it as? MutableList<Int>
+                } ?: run {
+                    YLog.error("$TAG: whiteList not found in the argument list")
                     return@before
                 }
 

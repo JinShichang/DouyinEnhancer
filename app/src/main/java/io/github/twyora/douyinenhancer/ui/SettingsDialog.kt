@@ -7,6 +7,7 @@ import android.app.Activity.RESULT_CANCELED
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.os.Bundle
 import android.preference.Preference
@@ -16,21 +17,23 @@ import android.preference.SwitchPreference
 import android.view.ContextThemeWrapper
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
-import androidx.core.content.edit
 import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
 import com.highcapable.yukihookapi.hook.log.YLog
-import io.fastkv.FastKV
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
-import io.github.twyora.douyinenhancer.config.FastKVConfigManager
-import io.github.twyora.douyinenhancer.config.key.MiscKey
-import io.github.twyora.douyinenhancer.config.key.ModuleKey
+import io.github.twyora.douyinenhancer.config.ConfigManager
+import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
+import io.github.twyora.douyinenhancer.config.provider.ModuleConfigProvider
+import io.github.twyora.douyinenhancer.constant.HookInfoFiles
+import io.github.twyora.douyinenhancer.constant.SignatureKeys
 import io.github.twyora.douyinenhancer.hook.comment.CommentAudioHooker.hook
 import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.Method
 import io.github.twyora.douyinenhancer.utils.resolveMethod
 import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.toast
+import io.github.twyora.douyinenhancer.utils.verifySha256RsaSignature
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.URL
 import java.security.DigestInputStream
@@ -42,6 +45,7 @@ import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import kotlin.io.encoding.Base64
 import kotlin.system.exitProcess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -49,6 +53,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
+import org.erdtman.jcs.JsonCanonicalizer
 import org.json.JSONObject
 
 /**
@@ -56,7 +61,13 @@ import org.json.JSONObject
  *
  * Referenced from [BiliRoaming](https://github.com/yujincheng08/BiliRoaming/blob/master/app/src/main/java/me/iacn/biliroaming/SettingDialog.kt)
  */
-class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
+class SettingsDialog(context: Context) :
+    AlertDialog.Builder(
+        ContextThemeWrapper(
+            context,
+            R.style.MainTheme
+        )
+    ) {
     class PrefsFragment :
         PreferenceFragment(),
         Preference.OnPreferenceClickListener,
@@ -68,16 +79,18 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
 
-            val prefs = FastKVConfigManager.settings
-
-            preferenceManager.setField(Field("mSharedPreferences"), prefs)
+            preferenceManager.setField(
+                Field("mSharedPreferences"),
+                // TODO: Urgent refactor required. This relies on internal implementation details
+                ((ConfigManager.settingsStorage as FastKVStorage).fastKV) as SharedPreferences
+            )
             preferenceManager.setField(Field("mEditor"), null)
             addPreferencesFromResource(R.xml.prefs_setting)
 
-            if (!prefs.getBoolean(MiscKey.ENABLE_HIDDEN_FEATURES, false)) {
+            if (!ConfigManager.misc.hiddenFeatureEnabled.value) {
                 val miscCategory = findPreference("pref_category_misc") as? PreferenceCategory
                 miscCategory?.let { category ->
-                    findPreference(MiscKey.ENABLE_HIDDEN_FEATURES)?.let {
+                    findPreference(ConfigManager.misc.hiddenFeatureEnabled.key)?.let {
                         category.removePreference(it)
                     }
                     if (category.preferenceCount == 0) {
@@ -91,9 +104,12 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
             findPreference("export_config")?.onPreferenceClickListener = this
             findPreference("import_config")?.onPreferenceClickListener = this
             (findPreference("disable_verbose_logs") as? SwitchPreference)?.apply {
-                isChecked = FastKVConfigManager.module.getBoolean(ModuleKey.DISABLE_VERBOSE_LOGS, false)
+                isChecked = ConfigManager.module.verboseDisabled.value
                 onPreferenceChangeListener = this@PrefsFragment
             }
+            findPreference("invalid_hook_info")?.onPreferenceClickListener = this
+            findPreference("load_custom_hook_info")?.onPreferenceClickListener = this
+            findPreference("reset_custom_hook_info")?.onPreferenceClickListener = this
             findPreference("version")?.summary = BuildConfig.VERSION_NAME
             findPreference("version")?.onPreferenceClickListener = this
             findPreference("build_time")?.summary =
@@ -121,39 +137,15 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
             }
 
             "version" -> {
-                val prefs = FastKVConfigManager.settings
-                if (!prefs.getBoolean(MiscKey.ENABLE_HIDDEN_FEATURES, false)) {
+                if (!ConfigManager.misc.hiddenFeatureEnabled.value) {
                     if (++hiddenFeatureClickCount == HIDDEN_FEATURE_TRIGGER_CLICK_COUNT) {
-                        prefs.edit(commit = true) {
-                            putBoolean(MiscKey.ENABLE_HIDDEN_FEATURES, true)
-                        }
-                        activity.runOnUiThread {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.pref_misc_enable_hidden_features_restart_required),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        ConfigManager.misc.hiddenFeatureEnabled.value = true
+                        activity.toast(R.string.pref_misc_enable_hidden_features_restart_required)
                     } else if (hiddenFeatureClickCount >= HIDDEN_FEATURE_HINT_FROM_CLICK_COUNT) {
-                        activity.runOnUiThread {
-                            Toast.makeText(
-                                context,
-                                context.getString(
-                                    R.string.pref_misc_enable_hidden_features_steps_remaining,
-                                    HIDDEN_FEATURE_TRIGGER_CLICK_COUNT - hiddenFeatureClickCount
-                                ),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        activity.toast(R.string.pref_misc_enable_hidden_features_steps_remaining)
                     }
                 } else {
-                    activity.runOnUiThread {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.pref_misc_enable_hidden_features_already_enabled),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    activity.toast(R.string.pref_misc_enable_hidden_features_already_enabled)
                 }
                 true
             }
@@ -162,6 +154,25 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
 
             "import_config" -> onImportConfigClick()
 
+            "invalid_hook_info" -> {
+                ConfigManager.module.hookInfoGeneration.value++
+                activity.toast(R.string.success)
+                true
+            }
+
+            "load_custom_hook_info" -> onLoadCustomHookInfoClick()
+
+            "reset_custom_hook_info" -> {
+                val presetFile = File(context.cacheDir, HookInfoFiles.HOOK_INFO_PRESET_FILE_NAME)
+                if (presetFile.exists()) {
+                    presetFile.writeText("")
+                }
+                ConfigManager.module.hookInfoGeneration.value++
+                activity.toast(R.string.success)
+
+                true
+            }
+
             else -> false
         }
 
@@ -169,9 +180,7 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
         override fun onPreferenceChange(preference: Preference, newValue: Any): Boolean = when (preference.key) {
             "disable_verbose_logs" -> {
                 val verboseLogsDisabled = newValue as Boolean
-                FastKVConfigManager.module.edit(commit = true) {
-                    putBoolean(ModuleKey.DISABLE_VERBOSE_LOGS, verboseLogsDisabled)
-                }
+                ConfigManager.module.verboseDisabled.value = verboseLogsDisabled
                 YLog.info("!!verbose logging disabled is $verboseLogsDisabled!!")
                 true
             }
@@ -204,7 +213,10 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
                                             it.exists()
                                         }.forEach { file ->
                                             zipOut.putNextEntry(ZipEntry(file.name))
-                                            DigestInputStream(file.inputStream(), digest).use { input ->
+                                            DigestInputStream(
+                                                file.inputStream(),
+                                                digest
+                                            ).use { input ->
                                                 input.copyTo(zipOut)
                                             }
                                             zipOut.closeEntry()
@@ -219,18 +231,15 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
                                     }
                                 }
                             }.onFailure {
-                                activity.runOnUiThread {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.config_export_failed, it.message),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+                                activity.toast(
+                                    activity.getString(
+                                        R.string.config_export_failed,
+                                        it.message ?: it.toString()
+                                    )
+                                )
                                 YLog.error("$TAG: export config failed", it)
                             }.onSuccess {
-                                activity.runOnUiThread {
-                                    Toast.makeText(context, R.string.config_export_success, Toast.LENGTH_SHORT).show()
-                                }
+                                activity.toast(R.string.config_export_success)
                             }
                         }
 
@@ -278,34 +287,82 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
                                     throw IOException(context.getString(R.string.config_import_corrupted))
                                 }
 
-                                val settingsPref = FastKVConfigManager.settings
-                                val hiddenFeatureEnabled = settingsPref.getBoolean(MiscKey.ENABLE_HIDDEN_FEATURES, false)
-                                val importedSettings = FastKV.Builder(context.cacheDir.absolutePath, tempBaseName).build()
+                                val settings = ConfigManager.settingsStorage
+                                val hiddenFeatureValue = ConfigManager.misc.hiddenFeatureEnabled.value
+                                val importedSettings = FastKVStorage.open(context.cacheDir.absolutePath, tempBaseName)
                                 try {
-                                    (settingsPref as FastKV).putAll(
-                                        importedSettings.all
-                                    )
-                                    settingsPref.putBoolean(MiscKey.ENABLE_HIDDEN_FEATURES, hiddenFeatureEnabled)
+                                    settings.putAll(importedSettings.getAll())
+                                    ConfigManager.misc.hiddenFeatureEnabled.value = hiddenFeatureValue
                                 } finally {
                                     importedSettings.close()
                                 }
                             }.onFailure {
-                                activity.runOnUiThread {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.config_import_failed, it.message),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+                                activity.toast(
+                                    activity.getString(
+                                        R.string.config_import_failed,
+                                        it.message ?: it.toString()
+                                    )
+                                )
                                 YLog.error("$TAG: import config failed", it)
                             }.onSuccess {
-                                activity.runOnUiThread {
-                                    Toast.makeText(context, R.string.config_import_success, Toast.LENGTH_SHORT).show()
-                                }
+                                activity.toast(R.string.config_import_success)
                             }
                             settingsKvaTemp.delete()
                             settingsKvbTemp.delete()
                         }
+                    }
+                }
+
+                LOAD_CUSTOM_HOOK_INFO -> {
+                    val uri = data?.data
+                    if (resultCode == RESULT_CANCELED || uri == null) {
+                        return
+                    }
+                    runCatching {
+                        val customHookInfoBytes = requireNotNull(
+                            activity.contentResolver.openInputStream(uri)
+                        ) {
+                            "custom hook info file input stream is null"
+                        }.use {
+                            it.readBytes()
+                        }
+                        val customHookInfoJson = JSONObject(customHookInfoBytes.toString(Charsets.UTF_8))
+                        val expectedSignature = customHookInfoJson.optString("signature")
+
+                        customHookInfoJson.remove("signature")
+                        val canonicalHookInfoPresetBytes = JsonCanonicalizer(
+                            customHookInfoJson.toString()
+                        ).encodedString.toByteArray(Charsets.UTF_8)
+
+                        if (expectedSignature.isBlank() ||
+                            ByteArrayInputStream(canonicalHookInfoPresetBytes).use { stream ->
+                                !verifySha256RsaSignature(
+                                    stream,
+                                    Base64.decode(expectedSignature),
+                                    Base64.decode(SignatureKeys.HOOK_INFO_PRESET_PUBLIC_KEY_B64)
+                                )
+                            }
+                        ) {
+                            activity.toast(R.string.untrusted_obfuscation_map)
+                        }
+
+                        File(
+                            context.cacheDir,
+                            HookInfoFiles.HOOK_INFO_PRESET_FILE_NAME
+                        ).outputStream().use { out ->
+                            out.write(customHookInfoBytes)
+                        }
+                        ConfigManager.module.hookInfoGeneration.value++
+                    }.onFailure {
+                        activity.toast(
+                            activity.getString(
+                                R.string.import_failed,
+                                it.message ?: it.toString()
+                            )
+                        )
+                        YLog.error("$TAG: load custom hook info failed", it)
+                    }.onSuccess {
+                        activity.toast(R.string.import_success_restart_required)
                     }
                 }
 
@@ -326,9 +383,7 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
             runCatching {
                 startActivityForResult(Intent.createChooser(intent, context.getString(R.string.config_export_chooser)), EXPORT_CONFIG)
             }.onFailure {
-                activity.runOnUiThread {
-                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                }
+                activity.toast(it.message ?: it.toString())
             }
 
             return true
@@ -341,23 +396,34 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
             runCatching {
                 startActivityForResult(Intent.createChooser(intent, context.getString(R.string.config_import_chooser)), IMPORT_CONFIG)
             }.onFailure {
-                activity.runOnUiThread {
-                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                }
+                activity.toast(it.message ?: it.toString())
+            }
+
+            return true
+        }
+
+        private fun onLoadCustomHookInfoClick(): Boolean {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+            intent.type = "application/json"
+            intent.addCategory(Intent.CATEGORY_OPENABLE)
+            runCatching {
+                startActivityForResult(
+                    Intent.createChooser(intent, context.getString(R.string.load_custom_hook_info_chooser)),
+                    LOAD_CUSTOM_HOOK_INFO
+                )
+            }.onFailure {
+                activity.toast(it.message ?: it.toString())
             }
 
             return true
         }
 
         private fun checkUpdate() = scope.launch {
+            val latestReleaseURL = context.getString(R.string.latest_release_api_url)
             val latestReleaseJson = runCatching {
                 withContext(Dispatchers.IO) {
                     JSONObject(
-                        URL(
-                            context.getString(
-                                R.string.latest_release_api_url
-                            )
-                        ).readText()
+                        URL(latestReleaseURL).readText()
                     )
                 }
             }.onFailure {
@@ -385,20 +451,12 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
                         }
                     } ?: context.getString(R.string.pref_about_update_available_summary)
                 }
-                val counter = FastKVConfigManager.module.getInt(ModuleKey.NOTIFY_UPDATE_COOLDOWN, NOTIFY_UPDATE_COOLDOWN_PERIOD)
+                val counter = ConfigManager.module.notifyUpdateCooldown.value
                 val newCounter =
-                    (counter - 1 + NOTIFY_UPDATE_COOLDOWN_PERIOD) % NOTIFY_UPDATE_COOLDOWN_PERIOD
-                FastKVConfigManager.module.edit(true) {
-                    putInt(ModuleKey.NOTIFY_UPDATE_COOLDOWN, newCounter)
-                }
+                    (counter - 1 + ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD) % ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD
+                ConfigManager.module.notifyUpdateCooldown.value = newCounter
                 if (newCounter == 0) {
-                    activity.runOnUiThread {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.notify_update_available),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    activity.toast(R.string.notify_update_available)
                 }
             } else {
                 findPreference("update")?.apply {
@@ -445,8 +503,10 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
                         YLog.error("$TAG: bound target ${instance::class.qualifiedName} has no view, skip recolor")
                         return@after
                     }
-                    view.findViewById<TextView>(android.R.id.title)?.setTextColor(activity.resources.getColor(R.color.white))
-                    view.findViewById<TextView>(android.R.id.summary)?.setTextColor(activity.resources.getColor(R.color.white_50))
+                    view.findViewById<TextView>(android.R.id.title)
+                        ?.setTextColor(activity.resources.getColor(R.color.white))
+                    view.findViewById<TextView>(android.R.id.summary)
+                        ?.setTextColor(activity.resources.getColor(R.color.white_50))
                 }
             }
         } else {
@@ -460,9 +520,7 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
             restartApplication(activity)
         }
         setOnDismissListener {
-            activity.runOnUiThread {
-                Toast.makeText(context, context.getString(R.string.restart_required), Toast.LENGTH_SHORT).show()
-            }
+            activity.toast(R.string.restart_required)
             activity.fragmentManager.beginTransaction().remove(prefsFragment).commitAllowingStateLoss()
             nightModeTextHookResult?.remove()
         }
@@ -472,12 +530,11 @@ class SettingsDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper
         private val TAG = this::class.simpleName
 
         private val verbose
-            get() = !FastKVConfigManager.module.getBoolean(ModuleKey.DISABLE_VERBOSE_LOGS, false)
-
-        private const val NOTIFY_UPDATE_COOLDOWN_PERIOD = 3
+            get() = !ConfigManager.module.verboseDisabled.value
 
         private const val EXPORT_CONFIG = 0
         private const val IMPORT_CONFIG = 1
+        private const val LOAD_CUSTOM_HOOK_INFO = 2
 
         fun show(context: Context) {
             if (VerifyDialog.shouldVerify()) {
