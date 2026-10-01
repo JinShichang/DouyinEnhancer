@@ -17,7 +17,6 @@ import android.preference.SwitchPreference
 import android.view.ContextThemeWrapper
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
@@ -32,6 +31,7 @@ import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.Method
 import io.github.twyora.douyinenhancer.utils.resolveMethod
 import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.toast
 import io.github.twyora.douyinenhancer.utils.verifySha256RsaSignature
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -140,33 +140,12 @@ class SettingsDialog(context: Context) :
                 if (!ConfigManager.misc.hiddenFeatureEnabled.value) {
                     if (++hiddenFeatureClickCount == HIDDEN_FEATURE_TRIGGER_CLICK_COUNT) {
                         ConfigManager.misc.hiddenFeatureEnabled.value = true
-                        activity.runOnUiThread {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.pref_misc_enable_hidden_features_restart_required),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        activity.toast(R.string.pref_misc_enable_hidden_features_restart_required)
                     } else if (hiddenFeatureClickCount >= HIDDEN_FEATURE_HINT_FROM_CLICK_COUNT) {
-                        activity.runOnUiThread {
-                            Toast.makeText(
-                                context,
-                                context.getString(
-                                    R.string.pref_misc_enable_hidden_features_steps_remaining,
-                                    HIDDEN_FEATURE_TRIGGER_CLICK_COUNT - hiddenFeatureClickCount
-                                ),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        activity.toast(R.string.pref_misc_enable_hidden_features_steps_remaining)
                     }
                 } else {
-                    activity.runOnUiThread {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.pref_misc_enable_hidden_features_already_enabled),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    activity.toast(R.string.pref_misc_enable_hidden_features_already_enabled)
                 }
                 true
             }
@@ -177,13 +156,7 @@ class SettingsDialog(context: Context) :
 
             "invalid_hook_info" -> {
                 ConfigManager.module.hookInfoGeneration.value++
-                activity.runOnUiThread {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.success),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                activity.toast(R.string.success)
                 true
             }
 
@@ -195,14 +168,7 @@ class SettingsDialog(context: Context) :
                     presetFile.writeText("")
                 }
                 ConfigManager.module.hookInfoGeneration.value++
-
-                activity.runOnUiThread {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.success),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                activity.toast(R.string.success)
 
                 true
             }
@@ -265,18 +231,15 @@ class SettingsDialog(context: Context) :
                                     }
                                 }
                             }.onFailure {
-                                activity.runOnUiThread {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.config_export_failed, it.message),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+                                activity.toast(
+                                    activity.getString(
+                                        R.string.config_export_failed,
+                                        it.message ?: it.toString()
+                                    )
+                                )
                                 YLog.error("$TAG: export config failed", it)
                             }.onSuccess {
-                                activity.runOnUiThread {
-                                    Toast.makeText(context, R.string.config_export_success, Toast.LENGTH_SHORT).show()
-                                }
+                                activity.toast(R.string.config_export_success)
                             }
                         }
 
@@ -334,18 +297,15 @@ class SettingsDialog(context: Context) :
                                     importedSettings.close()
                                 }
                             }.onFailure {
-                                activity.runOnUiThread {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.config_import_failed, it.message),
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+                                activity.toast(
+                                    activity.getString(
+                                        R.string.config_import_failed,
+                                        it.message ?: it.toString()
+                                    )
+                                )
                                 YLog.error("$TAG: import config failed", it)
                             }.onSuccess {
-                                activity.runOnUiThread {
-                                    Toast.makeText(context, R.string.config_import_success, Toast.LENGTH_SHORT).show()
-                                }
+                                activity.toast(R.string.config_import_success)
                             }
                             settingsKvaTemp.delete()
                             settingsKvbTemp.delete()
@@ -383,13 +343,7 @@ class SettingsDialog(context: Context) :
                                 )
                             }
                         ) {
-                            activity.runOnUiThread {
-                                Toast.makeText(
-                                    context,
-                                    context.getString(R.string.untrusted_obfuscation_map),
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                            activity.toast(R.string.untrusted_obfuscation_map)
                         }
 
                         File(
@@ -400,18 +354,15 @@ class SettingsDialog(context: Context) :
                         }
                         ConfigManager.module.hookInfoGeneration.value++
                     }.onFailure {
-                        activity.runOnUiThread {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.import_failed, it.message),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        activity.toast(
+                            activity.getString(
+                                R.string.import_failed,
+                                it.message ?: it.toString()
+                            )
+                        )
                         YLog.error("$TAG: load custom hook info failed", it)
                     }.onSuccess {
-                        activity.runOnUiThread {
-                            Toast.makeText(context, R.string.import_success_restart_required, Toast.LENGTH_SHORT).show()
-                        }
+                        activity.toast(R.string.import_success_restart_required)
                     }
                 }
 
@@ -432,9 +383,7 @@ class SettingsDialog(context: Context) :
             runCatching {
                 startActivityForResult(Intent.createChooser(intent, context.getString(R.string.config_export_chooser)), EXPORT_CONFIG)
             }.onFailure {
-                activity.runOnUiThread {
-                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                }
+                activity.toast(it.message ?: it.toString())
             }
 
             return true
@@ -447,9 +396,7 @@ class SettingsDialog(context: Context) :
             runCatching {
                 startActivityForResult(Intent.createChooser(intent, context.getString(R.string.config_import_chooser)), IMPORT_CONFIG)
             }.onFailure {
-                activity.runOnUiThread {
-                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                }
+                activity.toast(it.message ?: it.toString())
             }
 
             return true
@@ -465,9 +412,7 @@ class SettingsDialog(context: Context) :
                     LOAD_CUSTOM_HOOK_INFO
                 )
             }.onFailure {
-                activity.runOnUiThread {
-                    Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
-                }
+                activity.toast(it.message ?: it.toString())
             }
 
             return true
@@ -511,13 +456,7 @@ class SettingsDialog(context: Context) :
                     (counter - 1 + ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD) % ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD
                 ConfigManager.module.notifyUpdateCooldown.value = newCounter
                 if (newCounter == 0) {
-                    activity.runOnUiThread {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.notify_update_available),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    activity.toast(R.string.notify_update_available)
                 }
             } else {
                 findPreference("update")?.apply {
@@ -581,9 +520,7 @@ class SettingsDialog(context: Context) :
             restartApplication(activity)
         }
         setOnDismissListener {
-            activity.runOnUiThread {
-                Toast.makeText(context, context.getString(R.string.restart_required), Toast.LENGTH_SHORT).show()
-            }
+            activity.toast(R.string.restart_required)
             activity.fragmentManager.beginTransaction().remove(prefsFragment).commitAllowingStateLoss()
             nightModeTextHookResult?.remove()
         }
