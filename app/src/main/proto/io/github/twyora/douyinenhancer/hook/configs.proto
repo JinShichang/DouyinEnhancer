@@ -397,6 +397,18 @@ message AbsTask {
   optional Method get_target_file_paths = 2;
 }
 
+message TabNode{
+  optional Class class = 1;
+  optional Field tab_id = 2;
+  optional Field children = 3;
+}
+
+message MPFBottomTabComponent{
+  optional Class class = 1;
+  optional Field tab_root = 2;
+  optional Method build_tab_views = 3;
+}
+
 message HookInfo {
   uint64 last_update_time = 1;
   uint32 module_version_code = 2;
@@ -452,6 +464,8 @@ message HookInfo {
   optional StoryServiceImpl story_service_impl = 61;
   optional AbsTask abs_task = 62;
   optional VideoPlayerStatus video_player_status = 63;
+  optional TabNode tab_node = 64;
+  optional MPFBottomTabComponent mpf_bottom_tab_component = 65;
 
   reserved 13, 18, 32, 35, 36, 38, 39, 40, 55;
 }

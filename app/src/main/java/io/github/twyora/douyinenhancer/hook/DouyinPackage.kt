@@ -127,6 +127,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     val heifData = HeifDataModule(hookInfo.heifData, classLoader)
     val closeableReference = CloseableReferenceModule(hookInfo.closeableReference, classLoader)
     val storyServiceImpl = StoryServiceImplModule(hookInfo.storyServiceImpl, classLoader)
+    val tabNode = TabNodeModule(hookInfo.tabNode, classLoader)
+    val mpfBottomTabComponent = MPFBottomTabComponentModule(hookInfo.mpfBottomTabComponent, classLoader)
 
     class CommentImageStructModule internal constructor(
         private val configs: Configs.CommentImageStruct,
@@ -1015,6 +1017,40 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         )
     }
 
+    class TabNodeModule internal constructor(private val configs: Configs.TabNode, private val classLoader: ClassLoader) {
+        val selfClass by weak {
+            configs.class_.nameOrNull?.toClass(classLoader)
+        }
+
+        fun tabId() = Field(configs.tabId.nameOrNull)
+
+        fun children() = Field(configs.children.nameOrNull)
+
+        companion object {
+            const val TAB_ID_HOMEPAGE_HOME = "homepage_home"
+            const val TAB_ID_HOMEPAGE_MALL = "homepage_mall"
+            const val TAB_ID_HOMEPAGE_PUBLISH = "homepage_publish"
+            const val TAB_ID_HOMEPAGE_NOTIFICATION = "homepage_notification"
+            const val TAB_ID_HOMEPAGE_PROFILE = "homepage_profile"
+        }
+    }
+
+    class MPFBottomTabComponentModule internal constructor(
+        private val configs: Configs.MPFBottomTabComponent,
+        private val classLoader: ClassLoader
+    ) {
+        val selfClass by weak {
+            configs.class_.nameOrNull?.toClass(classLoader)
+        }
+
+        fun tabRoot() = Field(configs.tabRoot.nameOrNull)
+
+        fun buildTabViews() = Method(
+            configs.buildTabViews.nameOrNull,
+            configs.buildTabViews.parameters.valuesListOrNull
+        )
+    }
+
     companion object {
         private val TAG = DouyinPackage::class.simpleName
 
@@ -1070,7 +1106,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 if (ConfigManager.module.hookInfoSource.value == ModuleConfigProvider.HOOK_INFO_SOURCE_UNTRUSTED_OVERLAY) {
                     YLog.warn(
                         "$TAG: Loading custom HookInfo from UNTRUSTED SOURCES may cause malfunctions." +
-                            " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
+                                " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
                     )
                 }
 
@@ -1152,7 +1188,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                     YLog.warn(
                         "$TAG: Loading custom HookInfo from UNTRUSTED SOURCES may cause malfunctions." +
-                            " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
+                                " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
                     )
                 }
 
@@ -3753,6 +3789,110 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                             parameters = MethodKt.parameters {
                                 values.clear()
                                 values.addAll(convertImgToMp4MethodData.paramTypeNames)
+                            }
+                        }
+                    }.onFailure {
+                        YLog.error(populateFailedMsg.format(TAG), it)
+                    }
+                }
+
+                tabNode = tabNode {
+                    runCatching {
+                        val tabNodeClassData = bridge.findClass {
+                            matcher {
+                                usingStrings {
+                                    add("TabNode")
+                                    add("tabId")
+                                    add("currentNode")
+                                }
+                            }
+                        }.singleOrNull()
+                        val tabIdFieldData = tabNodeClassData?.let {
+                            bridge.findField {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    modifiers = Modifier.PUBLIC
+                                    type = "java.lang.String"
+                                }
+                            }.singleOrNull()
+                        }
+                        val childrenFieldData = tabNodeClassData?.let {
+                            bridge.findField {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    modifiers = Modifier.PUBLIC
+                                    type = "java.util.List"
+                                }
+                            }.singleOrNull()
+                        }
+                        if (tabNodeClassData == null || tabIdFieldData == null || childrenFieldData == null) {
+                            YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
+                            return@tabNode
+                        }
+                        class_ = class_ {
+                            name = tabNodeClassData.name
+                        }
+                        tabId = field {
+                            name = tabIdFieldData.name
+                        }
+                        children = field {
+                            name = childrenFieldData.name
+                        }
+                    }.onFailure {
+                        YLog.error(populateFailedMsg.format(TAG), it)
+                    }
+                }
+
+                mpfBottomTabComponent = mPFBottomTabComponent {
+                    runCatching {
+                        val mpfBottomTabComponentClassData = bridge.findClass {
+                            matcher {
+                                usingStrings {
+                                    add("MPFBottomTabComponent", matchType = StringMatchType.Equals)
+                                    add("onViewCreate")
+                                }
+                            }
+                        }.singleOrNull()
+                        val tabRootFieldData = mpfBottomTabComponentClassData?.let {
+                            bridge.findField {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    this@apply.tabNode.class_.nameOrNull?.let { tabNodeClassName ->
+                                        type = tabNodeClassName
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        val buildTabViewsMethodData = mpfBottomTabComponentClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
+                                    params {
+                                        add("boolean")
+                                    }
+                                    returnType = "void"
+                                    usingStrings {
+                                        add("buildTabViews")
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        if (mpfBottomTabComponentClassData == null || tabRootFieldData == null || buildTabViewsMethodData == null) {
+                            YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
+                            return@mPFBottomTabComponent
+                        }
+                        class_ = class_ {
+                            name = mpfBottomTabComponentClassData.name
+                        }
+                        tabRoot = field {
+                            name = tabRootFieldData.name
+                        }
+                        buildTabViews = method {
+                            name = buildTabViewsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(buildTabViewsMethodData.paramTypeNames)
                             }
                         }
                     }.onFailure {
