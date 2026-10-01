@@ -1106,7 +1106,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 if (ConfigManager.module.hookInfoSource.value == ModuleConfigProvider.HOOK_INFO_SOURCE_UNTRUSTED_OVERLAY) {
                     YLog.warn(
                         "$TAG: Loading custom HookInfo from UNTRUSTED SOURCES may cause malfunctions." +
-                                " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
+                            " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
                     )
                 }
 
@@ -1188,7 +1188,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                     YLog.warn(
                         "$TAG: Loading custom HookInfo from UNTRUSTED SOURCES may cause malfunctions." +
-                                " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
+                            " You will LOSE the right to submit bug reports to maintainers until you clear custom HookInfo!"
                     )
                 }
 

@@ -27,7 +27,7 @@ object BottomTabHooker : YukiBaseHooker() {
             config.hideHomepageMall.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_MALL,
             config.hideHomepagePublish.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_PUBLISH,
             config.hideHomepageNotification.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_NOTIFICATION,
-            config.hideHomepageProfile.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_PROFILE,
+            config.hideHomepageProfile.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_PROFILE
         ).filter {
             it.first
         }.map {

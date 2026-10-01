@@ -397,13 +397,13 @@ message AbsTask {
   optional Method get_target_file_paths = 2;
 }
 
-message TabNode{
+message TabNode {
   optional Class class = 1;
   optional Field tab_id = 2;
   optional Field children = 3;
 }
 
-message MPFBottomTabComponent{
+message MPFBottomTabComponent {
   optional Class class = 1;
   optional Field tab_root = 2;
   optional Method build_tab_views = 3;
