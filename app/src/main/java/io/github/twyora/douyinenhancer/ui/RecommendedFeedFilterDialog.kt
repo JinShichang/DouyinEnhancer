@@ -8,12 +8,12 @@ import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.view.children
 import io.github.twyora.douyinenhancer.R
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.databinding.ItemInputWithDeleteBinding
 import io.github.twyora.douyinenhancer.databinding.RecommendedFeedFilterDialogBinding
+import io.github.twyora.douyinenhancer.utils.toast
 
 class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
     init {
@@ -124,45 +124,35 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
             val hideShortDurationLimit = recommendedFeedFilterDialogBinding.editShortDuration.text.toString().toIntOrNull() ?: 0
             val hideLongDurationLimit = recommendedFeedFilterDialogBinding.editLongDuration.text.toString().toIntOrNull() ?: Int.MAX_VALUE
             if (hideShortDurationLimit > hideLongDurationLimit) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_bounds), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_bounds)
                 return@setPositiveButton
             }
 
             val hideCollectCountMin = recommendedFeedFilterDialogBinding.editCollectCountMin.text.toString().toIntOrNull() ?: 0
             val hideCollectCountMax = recommendedFeedFilterDialogBinding.editCollectCountMax.text.toString().toIntOrNull() ?: Int.MAX_VALUE
             if (hideCollectCountMin > hideCollectCountMax) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_bounds), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_bounds)
                 return@setPositiveButton
             }
 
             val hideCommentCountMin = recommendedFeedFilterDialogBinding.editCommentCountMin.text.toString().toIntOrNull() ?: 0
             val hideCommentCountMax = recommendedFeedFilterDialogBinding.editCommentCountMax.text.toString().toIntOrNull() ?: Int.MAX_VALUE
             if (hideCommentCountMin > hideCommentCountMax) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_bounds), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_bounds)
                 return@setPositiveButton
             }
 
             val hideDiggCountMin = recommendedFeedFilterDialogBinding.editDiggCountMin.text.toString().toIntOrNull() ?: 0
             val hideDiggCountMax = recommendedFeedFilterDialogBinding.editDiggCountMax.text.toString().toIntOrNull() ?: Int.MAX_VALUE
             if (hideDiggCountMin > hideDiggCountMax) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_bounds), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_bounds)
                 return@setPositiveButton
             }
 
             val hideShareCountMin = recommendedFeedFilterDialogBinding.editShareCountMin.text.toString().toIntOrNull() ?: 0
             val hideShareCountMax = recommendedFeedFilterDialogBinding.editShareCountMax.text.toString().toIntOrNull() ?: Int.MAX_VALUE
             if (hideShareCountMin > hideShareCountMax) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_bounds), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_bounds)
                 return@setPositiveButton
             }
 
@@ -178,9 +168,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
                     }
                 }.isFailure
             ) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_regex), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_regex)
                 return@setPositiveButton
             }
 
@@ -208,9 +196,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
                     }
                 }.isFailure
             ) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_regex), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_regex)
                 return@setPositiveButton
             }
 
@@ -221,9 +207,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
                     }
                 }.isFailure
             ) {
-                (context as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.save_failed_invalid_regex), Toast.LENGTH_SHORT).show()
-                }
+                (context as? Activity)?.toast(R.string.save_failed_invalid_regex)
                 return@setPositiveButton
             }
 
@@ -251,9 +235,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
             cfg.descRegexMode.value = descRegexMode
             cfg.descKeywords.value = descKeywords
 
-            (context as? Activity)?.runOnUiThread {
-                Toast.makeText(context, context.getString(R.string.save_success_restart_required), Toast.LENGTH_SHORT).show()
-            }
+            (context as? Activity)?.toast(R.string.save_success_restart_required)
         }
     }
 
