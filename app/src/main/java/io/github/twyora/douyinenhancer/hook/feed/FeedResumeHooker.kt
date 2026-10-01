@@ -5,8 +5,8 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object FeedResumeHooker : YukiBaseHooker() {
@@ -32,11 +32,11 @@ object FeedResumeHooker : YukiBaseHooker() {
         // The reason I ultimately chose this strategy is that I cannot confirm whether FeedPanelProxy
         // will be removed or obfuscated into another name. If this functionality breaks,
         // maintaining extra hook points becomes an additional maintenance burden
-        packageInstance.baseListFragmentPanel.selfClass?.resolveMethod(
+        packageInstance.baseListFragmentPanel.selfClass?.resolveMethodOrNull(
             packageInstance.baseListFragmentPanel.handleVideoEvent()
         )?.hook {
             before {
-                val videoType = args[0]?.getField<Int>(
+                val videoType = args[0]?.getFieldOrNull<Int>(
                     packageInstance.videoEvent.type()
                 ) ?: run {
                     YLog.error("$TAG: video type is null")

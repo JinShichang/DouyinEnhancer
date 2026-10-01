@@ -5,8 +5,8 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object CommentImageHooker : YukiBaseHooker() {
@@ -26,11 +26,11 @@ object CommentImageHooker : YukiBaseHooker() {
             return
         }
 
-        packageInstance.commentImageStruct.selfClass?.resolveMethod(
+        packageInstance.commentImageStruct.selfClass?.resolveMethodOrNull(
             packageInstance.commentImageStruct.getDownloadUrl()
         )?.hook {
             before {
-                val originUrl = instance.getField<Any?>(
+                val originUrl = instance.getFieldOrNull<Any?>(
                     packageInstance.commentImageStruct.originUrl()
                 )
                 if (originUrl != null) {

@@ -18,13 +18,13 @@ import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.FileTypeDetector
 import io.github.twyora.douyinenhancer.utils.HookTransaction
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.getStaticField
-import io.github.twyora.douyinenhancer.utils.invokeMethod
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
+import io.github.twyora.douyinenhancer.utils.getStaticFieldOrNull
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
-import io.github.twyora.douyinenhancer.utils.invokeStaticMethod
-import io.github.twyora.douyinenhancer.utils.resolveMethod
-import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.invokeStaticMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
+import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 import java.io.File
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.io.Sink
@@ -78,24 +78,24 @@ object CommentEmojiHooker : YukiBaseHooker() {
     }
 
     private fun installSaveEmojiToAlbumButtonHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.saveImageActionItem.selfClass?.resolveMethod(
+        return packageInstance.saveImageActionItem.selfClass?.resolveMethodOrNull(
             packageInstance.saveImageActionItem.isVisible()
         )?.hook {
             before {
-                val comment = instance.getField<Any>(
+                val comment = instance.getFieldOrNull<Any>(
                     packageInstance.commentLongPressItemModel.commentActionParams()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.commentActionParams.comment()
                 ) ?: run {
                     YLog.error("$TAG: failed to get comment from save image action item")
                     return@before
                 }
 
-                val emojiUrls = comment.getField<Any>(
+                val emojiUrls = comment.getFieldOrNull<Any>(
                     packageInstance.comment.emoji()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.emoji.animateUrl()
-                )?.getField<List<String>>(
+                )?.getFieldOrNull<List<String>>(
                     packageInstance.urlModel.urlList()
                 )
                 if (!emojiUrls.isNullOrEmpty()) {
@@ -117,23 +117,23 @@ object CommentEmojiHooker : YukiBaseHooker() {
     }
 
     private fun installClickSaveEmojiToAlbumButtonCallbackHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.saveImageActionItem.selfClass?.resolveMethod(
+        return packageInstance.saveImageActionItem.selfClass?.resolveMethodOrNull(
             packageInstance.saveImageActionItem.onClick()
         )?.hook {
             before {
-                val comment = instance.getField<Any>(
+                val comment = instance.getFieldOrNull<Any>(
                     packageInstance.commentLongPressItemModel.commentActionParams()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.commentActionParams.comment()
                 ) ?: run {
                     YLog.error("$TAG: failed to get comment from ${instance::class.qualifiedName}")
                     return@before
                 }
-                val emojiUrls = comment.getField<Any>(
+                val emojiUrls = comment.getFieldOrNull<Any>(
                     packageInstance.comment.emoji()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.emoji.animateUrl()
-                )?.getField<List<String>>(
+                )?.getFieldOrNull<List<String>>(
                     packageInstance.urlModel.urlList()
                 ) ?: run {
                     YLog.error("$TAG: failed to get emoji URLs from ${comment::class.qualifiedName}")
@@ -163,13 +163,13 @@ object CommentEmojiHooker : YukiBaseHooker() {
     }
 
     private fun installEmojiDownloadedCallbackHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.commentImageSaveDownloadListener.selfClass?.resolveMethod(
+        return packageInstance.commentImageSaveDownloadListener.selfClass?.resolveMethodOrNull(
             packageInstance.commentImageSaveDownloadListener.onSuccessed()
         )?.hook {
             before {
                 val downloadInfo = args[0] ?: return@before
 
-                val dlUrl = downloadInfo.getField<String>(
+                val dlUrl = downloadInfo.getFieldOrNull<String>(
                     packageInstance.downloadInfo.url()
                 ) ?: run {
                     YLog.error("$TAG: failed to get download url from download info, skipping emoji handling")
@@ -184,14 +184,14 @@ object CommentEmojiHooker : YukiBaseHooker() {
                 }
 
                 // Downloaded file save path
-                val sourcePath = downloadInfo.invokeMethod<String?>(
+                val sourcePath = downloadInfo.invokeMethodOrNull<String?>(
                     packageInstance.downloadInfo.getTargetFilePath()
                 ) ?: return@before
                 val sourceFileInfo = FileTypeDetector.detect(sourcePath)
                 YLog.info("$TAG: source MIME type: ${sourceFileInfo.mimeType}")
 
                 val saveFilePrefix = "comment_${
-                    packageInstance.digestUtils.selfClass?.invokeStaticMethod<String>(
+                    packageInstance.digestUtils.selfClass?.invokeStaticMethodOrNull<String>(
                         packageInstance.digestUtils.md5Hex(),
                         dlUrl + System.currentTimeMillis().toString()
                     )
@@ -216,12 +216,11 @@ object CommentEmojiHooker : YukiBaseHooker() {
                     YLog.info("$TAG: source MIME type is video, converting to GIF")
 
                     val gifTempPath = "${
-                        packageInstance.ugFileUtils.selfClass
-                            ?.invokeStaticMethod<String>(
-                                packageInstance.ugFileUtils.getStorageDir(),
-                                "/comment/images",
-                                false
-                            )
+                        packageInstance.ugFileUtils.selfClass?.invokeStaticMethodOrNull<String>(
+                            packageInstance.ugFileUtils.getStorageDir(),
+                            "/comment/images",
+                            false
+                        )
                     }${File.separator}$saveFilePrefix.gif"
 
                     if (convertMedia2Gif(sourcePath, gifTempPath)) {
@@ -235,36 +234,35 @@ object CommentEmojiHooker : YukiBaseHooker() {
 
                 // Copy to album
                 val saveFilePath = "${
-                    packageInstance.ugFileUtils.selfClass
-                        ?.invokeStaticMethod<String>(
-                            packageInstance.ugFileUtils.getExternalStorageDir(),
-                            "/douyin/comment",
-                            false,
-                            false
-                        )
+                    packageInstance.ugFileUtils.selfClass?.invokeStaticMethodOrNull<String>(
+                        packageInstance.ugFileUtils.getExternalStorageDir(),
+                        "/douyin/comment",
+                        false,
+                        false
+                    )
                 }${File.separator}$saveFilePrefix.$saveFileExt"
 
                 if (verbose) {
                     YLog.debug("$TAG: saving emoji to $saveFilePath")
                 }
 
-                val cpRet = packageInstance.ugFileUtils.selfClass?.invokeStaticMethod<Boolean>(
+                val cpRet = packageInstance.ugFileUtils.selfClass?.invokeStaticMethodOrNull<Boolean>(
                     packageInstance.ugFileUtils.copyFile(),
                     fileToSave,
                     saveFilePath,
                     false,
                     null,
-                    instance.getField<Any>(
+                    instance.getFieldOrNull<Any>(
                         packageInstance.commentImageSaveDownloadListener.listenerProviderParam()
-                    )?.getField<Any>(
+                    )?.getFieldOrNull<Any>(
                         packageInstance.listenerProviderParam.cert()
                     )
                 )
 
                 // shows success dialog
-                val context = instance.getField<Any>(
+                val context = instance.getFieldOrNull<Any>(
                     packageInstance.commentImageSaveDownloadListener.listenerProviderParam()
-                )?.getField<Context>(
+                )?.getFieldOrNull<Context>(
                     packageInstance.listenerProviderParam.context()
                 ) ?: run {
                     YLog.error("$TAG: unable to get Context from download listener")
@@ -295,7 +293,7 @@ object CommentEmojiHooker : YukiBaseHooker() {
     }
 
     private fun installCreateUriHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.ugFileUtils.selfClass?.resolveMethod(
+        return packageInstance.ugFileUtils.selfClass?.resolveMethodOrNull(
             packageInstance.ugFileUtils.createUri()
         )?.hook {
             after {
@@ -332,7 +330,7 @@ object CommentEmojiHooker : YukiBaseHooker() {
                     filePath.lastIndexOf(File.separator) + 1
                 )
 
-                val context = packageInstance.ugFileUtils.selfClass?.getStaticField<Context>(
+                val context = packageInstance.ugFileUtils.selfClass?.getStaticFieldOrNull<Context>(
                     packageInstance.ugFileUtils.context()
                 ) ?: run {
                     YLog.error("$TAG: unable to get Context from ugFileUtils")
@@ -340,7 +338,7 @@ object CommentEmojiHooker : YukiBaseHooker() {
                 }
                 val tokenCert = args[3]
 
-                val finalUri = packageInstance.ugFileUtils.selfClass?.invokeStaticMethod<Uri>(
+                val finalUri = packageInstance.ugFileUtils.selfClass?.invokeStaticMethodOrNull<Uri>(
                     packageInstance.ugFileUtils.getImageUri(),
                     context,
                     fileName,
@@ -369,30 +367,30 @@ object CommentEmojiHooker : YukiBaseHooker() {
     }
 
     private fun injectEmojiUrls(comment: Any, emojiUrls: List<String>) {
-        var imageList = comment.getField<List<*>>(
+        var imageList = comment.getFieldOrNull<List<*>>(
             packageInstance.comment.imageList()
         )
         if (imageList.isNullOrEmpty()) {
             val newStruct = packageInstance.commentImageStruct.selfClass?.createInstance()
             imageList = listOf(newStruct)
-            comment.setField(
+            comment.setFieldOrNull(
                 packageInstance.comment.imageList(),
                 imageList
             )
         }
 
         val targetStruct = imageList[0]
-        var urlModel = targetStruct?.getField<Any>(
+        var urlModel = targetStruct?.getFieldOrNull<Any>(
             packageInstance.commentImageStruct.downloadUrl()
         )
         if (urlModel == null) {
             urlModel = packageInstance.urlModel.selfClass?.createInstance()
-            targetStruct?.setField(
+            targetStruct?.setFieldOrNull(
                 packageInstance.commentImageStruct.downloadUrl(),
                 urlModel
             )
         }
-        urlModel?.setField(packageInstance.urlModel.urlList(), emojiUrls)
+        urlModel?.setFieldOrNull(packageInstance.urlModel.urlList(), emojiUrls)
     }
 
     private fun convertMedia2Gif(mediaPath: String, gifPath: String): Boolean {

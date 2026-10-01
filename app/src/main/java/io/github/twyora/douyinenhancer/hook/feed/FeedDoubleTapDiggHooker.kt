@@ -5,7 +5,7 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object FeedDoubleTapDiggHooker : YukiBaseHooker() {
@@ -25,7 +25,7 @@ object FeedDoubleTapDiggHooker : YukiBaseHooker() {
             return
         }
 
-        packageInstance.baseListFragmentPanel.selfClass?.resolveMethod(
+        packageInstance.baseListFragmentPanel.selfClass?.resolveMethodOrNull(
             packageInstance.baseListFragmentPanel.handleBigDiggViewClick()
         )?.hook {
             before {
