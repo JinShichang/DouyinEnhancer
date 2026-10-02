@@ -31,13 +31,13 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import io.github.twyora.douyinenhancer.R
-import io.github.twyora.douyinenhancer.ui.navigation.AppRoutes
 import io.github.twyora.douyinenhancer.ui.content.home.HomeContent
-import io.github.twyora.douyinenhancer.ui.content.home.UiState as HomeContentUiState
 import io.github.twyora.douyinenhancer.ui.content.home.HomeContentViewModel
+import io.github.twyora.douyinenhancer.ui.content.home.UiActions as HomeContentUiActions
+import io.github.twyora.douyinenhancer.ui.content.home.UiState as HomeContentUiState
+import io.github.twyora.douyinenhancer.ui.navigation.AppRoutes
 import io.github.twyora.douyinenhancer.utils.openUrl
 import kotlinx.coroutines.launch
-import io.github.twyora.douyinenhancer.ui.content.home.UiActions as HomeContentUiActions
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,7 +151,7 @@ class MainActivity : ComponentActivity() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                uiActions = uiActions,
+                uiActions = uiActions
             )
         }
     }

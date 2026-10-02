@@ -10,10 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun PreferenceCategory(
-    title: String,
-    modifier: Modifier = Modifier
-) {
+fun PreferenceCategory(title: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically

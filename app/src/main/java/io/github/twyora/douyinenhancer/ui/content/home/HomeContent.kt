@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
@@ -14,14 +15,9 @@ import io.github.twyora.douyinenhancer.ui.components.PreferenceCategory
 import io.github.twyora.douyinenhancer.ui.components.PreferenceItem
 import io.github.twyora.douyinenhancer.ui.components.SwitchPreferenceItem
 import java.text.SimpleDateFormat
-import androidx.compose.ui.platform.LocalLocale
 
 @Composable
-fun HomeContent(
-    uiState: UiState,
-    modifier: Modifier = Modifier,
-    uiActions: UiActions = UiActions()
-) {
+fun HomeContent(uiState: UiState, modifier: Modifier = Modifier, uiActions: UiActions = UiActions()) {
     LazyColumn(modifier = modifier) {
         item {
             PreferenceCategory(title = stringResource(R.string.pref_category_settings))
@@ -116,7 +112,8 @@ fun HomeContent(
             PreferenceItem(
                 title = stringResource(R.string.pref_about_build_time_title),
                 summary = SimpleDateFormat(
-                    "yyyy-MM-dd HH:mm:ss", LocalLocale.current.platformLocale
+                    "yyyy-MM-dd HH:mm:ss",
+                    LocalLocale.current.platformLocale
                 ).format(BuildConfig.BUILD_TIMESTAMP)
             )
         }
@@ -137,15 +134,15 @@ fun HomeContent(
                     stringResource(R.string.pref_about_activation_status_activated_summary)
                 } else {
                     stringResource(R.string.pref_about_activation_status_deactivated_summary)
-                },
+                }
             )
         }
     }
 }
 
-//@Preview
-//@Composable
-//fun MainScreenPreview() {
+// @Preview
+// @Composable
+// fun MainScreenPreview() {
 //    MaterialTheme {
 //        MainScreen(
 //            uiState = UiState(
@@ -154,4 +151,4 @@ fun HomeContent(
 //            )
 //        )
 //    }
-//}
+// }

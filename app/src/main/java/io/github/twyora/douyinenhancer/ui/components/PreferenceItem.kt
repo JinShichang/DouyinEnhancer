@@ -14,12 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun PreferenceItem(
-    title: String,
-    modifier: Modifier = Modifier,
-    summary: String? = null,
-    onClick: () -> Unit = {},
-) {
+fun PreferenceItem(title: String, modifier: Modifier = Modifier, summary: String? = null, onClick: () -> Unit = {}) {
     Row(
         modifier = modifier
             .fillMaxWidth()
