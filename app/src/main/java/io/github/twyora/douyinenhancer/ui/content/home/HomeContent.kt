@@ -1,9 +1,5 @@
 package io.github.twyora.douyinenhancer.ui.content.home
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -139,16 +135,3 @@ fun HomeContent(uiState: UiState, modifier: Modifier = Modifier, uiActions: UiAc
         }
     }
 }
-
-// @Preview
-// @Composable
-// fun MainScreenPreview() {
-//    MaterialTheme {
-//        MainScreen(
-//            uiState = UiState(
-//                launcherIconHidden = true,
-//                updateState = UpdateState(10, "0.10.0", "hellohellohellohellohellohellohellohellohello")
-//            )
-//        )
-//    }
-// }
