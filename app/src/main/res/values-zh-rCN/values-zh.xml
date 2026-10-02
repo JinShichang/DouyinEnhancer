@@ -209,7 +209,7 @@
     <string name="pref_settings_open_module_settings_summary">启动客户端并打开模块设置</string>
     <string name="pref_settings_hide_launcher_icon_title">隐藏桌面图标</string>
     <string name="pref_settings_hide_launcher_icon_summary">不显示本应用在启动器中的图标</string>
-    <string name="pref_about_activation_status_disabled_title">未启用</string>
+    <string name="pref_about_activation_status_deactivated_title">未启用</string>
     <string name="pref_about_activation_status_deactivated_summary">抖柚未激活</string>
     <string name="pref_about_activation_status_activated_title">已启用</string>
     <string name="pref_about_activation_status_activated_summary">抖柚已激活</string>

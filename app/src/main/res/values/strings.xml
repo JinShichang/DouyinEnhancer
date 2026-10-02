@@ -208,7 +208,7 @@
     <string name="pref_settings_open_module_settings_summary">Launch the client and open module settings</string>
     <string name="pref_settings_hide_launcher_icon_title">Hide launcher icon</string>
     <string name="pref_settings_hide_launcher_icon_summary">Don\'t show this app\'s icon in the launcher</string>
-    <string name="pref_about_activation_status_disabled_title">Not enabled</string>
+    <string name="pref_about_activation_status_deactivated_title">Not enabled</string>
     <string name="pref_about_activation_status_deactivated_summary">Douyin Enhancer not activated</string>
     <string name="pref_about_activation_status_activated_title">Enabled</string>
     <string name="pref_about_activation_status_activated_summary">Douyin Enhancer activated</string>
