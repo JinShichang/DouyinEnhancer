@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package io.github.twyora.douyinenhancer.ui.legacy
 
 import android.app.Activity
@@ -18,7 +16,13 @@ import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
 import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 
-class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
+class BottomTabBlockDialog(context: Context) :
+    AlertDialog.Builder(
+        ContextThemeWrapper(
+            context,
+            R.style.MainTheme
+        )
+    ) {
     class PrefsFragment : PreferenceFragment() {
         @Deprecated("Deprecated in Java")
         override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,13 +30,12 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
 
             preferenceManager.setFieldOrNull(
                 Field("mSharedPreferences"),
-                // TODO: Urgent refactor required. This relies on internal implementation details
-                ((ConfigManager.playbackComponentBlock.kvConfig as FastKVStorage).fastKV) as SharedPreferences
+                ((ConfigManager.bottomTab.kvConfig as FastKVStorage).fastKV) as SharedPreferences
             )
             preferenceManager.setFieldOrNull(Field("mEditor"), null)
-            addPreferencesFromResource(R.xml.pref_playback_component_block)
+            addPreferencesFromResource(R.xml.pref_bottom_tab_block)
 
-            ConfigManager.playbackComponentBlock.allConfigItems.filter { configItem ->
+            ConfigManager.bottomTab.allConfigItems.filter { configItem ->
                 configItem.status != ConfigStateMode.NORMAL
             }.forEach { hiddenConfigItem ->
                 findPreference(hiddenConfigItem.key)?.let {
@@ -46,11 +49,11 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
         val activity = context as Activity
 
         val prefsFragment = PrefsFragment()
-        activity.fragmentManager.beginTransaction().add(prefsFragment, "PlaybackComponentBlock").commit()
+        activity.fragmentManager.beginTransaction().add(prefsFragment, "BottomTabBlock").commit()
         activity.fragmentManager.executePendingTransactions()
 
         setView(prefsFragment.view)
-        setTitle(R.string.playback_component_block_dialog_title)
+        setTitle(R.string.bottom_tab_block_dialog_title)
         setNegativeButton(android.R.string.cancel, null)
         setPositiveButton(android.R.string.ok, null)
         setOnDismissListener {
@@ -64,9 +67,9 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
         fun show(context: Context) {
             runCatching {
                 (context as? Activity)?.injectModuleAppResources()
-                PlaybackComponentBlockDialog(context).show()
+                BottomTabBlockDialog(context).show()
             }.onFailure {
-                YLog.error("$TAG: failed to show playback component block dialog", it)
+                YLog.error("$TAG: failed to show bottom tab block dialog", it)
             }
         }
     }

@@ -7,7 +7,7 @@ import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.getStaticField
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object FeedComponentHooker : YukiBaseHooker() {
@@ -97,7 +97,7 @@ object FeedComponentHooker : YukiBaseHooker() {
     }
 
     private fun installPlaybackComponentBlockHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.fluxComponentDataAction.selfClass?.resolveMethod(
+        return packageInstance.fluxComponentDataAction.selfClass?.resolveMethodOrNull(
             packageInstance.fluxComponentDataAction.getSet()
         )?.hook {
             after {

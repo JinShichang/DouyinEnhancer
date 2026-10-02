@@ -129,6 +129,14 @@
     <string name="playback_component_block_ai_co_creators_three">✦ AI Duet Creator Avatar</string>
     <string name="playback_component_block_aigc_cocreate_status_title">✦ AI Co-Creation Tag</string>
 
+    <string name="bottom_tab_block_dialog_title">Hide Bottom Navigation Items</string>
+    <string name="bottom_tab_main_switch_title">Master Switch</string>
+    <string name="bottom_tab_main_switch_summary">Enable to configure hiding of bottom navigation entries</string>
+    <string name="bottom_tab_hide_homepage_home">Home</string>
+    <string name="bottom_tab_hide_homepage_mall">Mall</string>
+    <string name="bottom_tab_hide_homepage_publish">Publish Button</string>
+    <string name="bottom_tab_hide_homepage_notification">Messages</string>
+    <string name="bottom_tab_hide_homepage_profile">Profile</string>
 
     <string name="pref_category_backup">Backup &amp; Restore</string>
     <string name="pref_backup_export_title">Export Config</string>
@@ -153,6 +161,13 @@
     <string name="pref_module_disable_verbose_logs_title">Disable verbose logs</string>
     <string name="pref_module_disable_verbose_logs_summary">Report issues request to include verbose logs</string>
 
+    <string name="pref_module_invalid_hook_info_title">Invalidate obfuscation mapping</string>
+    <string name="pref_module_invalid_hook_info_summary">This forces the module to re-search methods and rebuild the obfuscation mapping</string>
+    <string name="pref_module_load_custom_hook_info_title">Load custom obfuscation mapping</string>
+    <string name="pref_module_reset_custom_hook_info_title">Reset custom obfuscation mapping</string>
+    <string name="load_custom_hook_info_chooser">Choose custom obfuscation mapping</string>
+    <string name="untrusted_obfuscation_map">Untrusted obfuscation mapping</string>
+
     <string name="verify_dialog_title">Verification</string>
     <string name="verify_dialog_description">This module is released only on GitHub. To respect the developer’s work, enter the module download URL for verification. Please read the repository README carefully before use.</string>
     <string name="verify_dialog_input_hint">GitHub address</string>
@@ -175,12 +190,16 @@
     <string name="pref_about_build_time_title">Build Time</string>
     <string name="unknown">Unknown</string>
     <string name="pref_about_back_then_title">Back Then🎵</string>
-    <string name="pref_about_back_then_summary">春风化青芒 十年如一往\n岁月如白驹如萤火如夕阳\n年轻时许下的豪言万丈\n何日遣冯唐🎵</string>
+    <string name="pref_about_back_then_summary">西风牵老马 载我过人家\n两袖结云霞 风尘来下榻\n我心怀不大 烦恼装不下\n无愁亦无忧啊 自称逍遥侠🎵</string>
 
+    <string name="success">Success</string>
+    <string name="failed">Failed</string>
     <string name="add">Add</string>
     <string name="delete">Delete</string>
     <string name="regex_mode">Regex mode</string>
     <string name="save_success_restart_required">Saved successfully. Some configurations will take effect after restarting the app</string>
+    <string name="import_success_restart_required">Import successfully. Some configurations will take effect after restarting the app</string>
+    <string name="import_failed">Import failed: %s</string>
     <string name="restart_required">Some features will take effect after restarting the app</string>
     <string name="notify_update_available">Douyin Enhancer has an update</string>
 
@@ -193,4 +212,6 @@
     <string name="pref_about_activation_status_deactivated_summary">Douyin Enhancer not activated</string>
     <string name="pref_about_activation_status_activated_title">Enabled</string>
     <string name="pref_about_activation_status_activated_summary">Douyin Enhancer activated</string>
+    <string name="pref_settings_main_help_title">Help</string>
+    <string name="pref_settings_main_help_summary">Tap to view full documentation, guides and FAQs</string>
 </resources>

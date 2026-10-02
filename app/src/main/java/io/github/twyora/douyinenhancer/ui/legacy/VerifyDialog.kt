@@ -5,13 +5,13 @@ import android.app.AlertDialog
 import android.content.Context
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
-import android.widget.Toast
 import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.databinding.VerifyDialogBinding
+import io.github.twyora.douyinenhancer.utils.toast
 
 class VerifyDialog(private val hostContext: Context) : AlertDialog.Builder(ContextThemeWrapper(hostContext, R.style.MainTheme)) {
     private val binding = VerifyDialogBinding.inflate(
@@ -39,13 +39,9 @@ class VerifyDialog(private val hostContext: Context) : AlertDialog.Builder(Conte
                 ConfigManager.module.lastVerifiedVersion.value = BuildConfig.VERSION_CODE
                 dialog.dismiss()
 
-                (hostContext as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.verify_toast_success), Toast.LENGTH_SHORT).show()
-                }
+                (hostContext as? Activity)?.toast(R.string.verify_toast_success)
             } else {
-                (hostContext as? Activity)?.runOnUiThread {
-                    Toast.makeText(context, context.getString(R.string.verify_toast_failure), Toast.LENGTH_SHORT).show()
-                }
+                (hostContext as? Activity)?.toast(R.string.verify_toast_failure)
             }
         }
         return dialog

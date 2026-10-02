@@ -14,11 +14,12 @@ import io.github.twyora.douyinenhancer.R
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.ui.SettingsScreen
-import io.github.twyora.douyinenhancer.utils.getField
+import io.github.twyora.douyinenhancer.ui.legacy.SettingsDialog
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
 import io.github.twyora.douyinenhancer.utils.invokeMethod
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object SettingsEntryHooker : YukiBaseHooker() {
@@ -38,7 +39,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
     }
 
     private fun installModuleSettingsEntryHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.douYinSettingNewVersionActivity.selfClass?.resolveMethod(
+        return packageInstance.douYinSettingNewVersionActivity.selfClass?.resolveMethodOrNull(
             packageInstance.douYinSettingNewVersionActivity.onResume()
         )?.hook {
             after {
@@ -47,7 +48,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                     return@after
                 }
 
-                val settingsScrollView = instance.getField<ViewGroup?>(
+                val settingsScrollView = instance.getFieldOrNull<ViewGroup?>(
                     packageInstance.douYinSettingNewVersionActivity.settingsScrollView()
                 ) ?: run {
                     YLog.error("$TAG: settings scroll view field not found")
@@ -81,7 +82,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                     packageInstance.commonItemView.setLeftIcon(),
                     R.drawable.ic_module_settings
                 )
-                moduleSettingsCommonItemView.invokeMethod<Unit>(
+                moduleSettingsCommonItemView.invokeMethodOrNull<Unit>(
                     packageInstance.commonItemView.setRightUIMode(),
                     0 // arrow mode for the right UI element
                 )
@@ -91,7 +92,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                 )
 
                 moduleSettingsCommonItemView.setOnClickListener {
-                    activity.startActivity(Intent(activity, SettingsScreen::class.java))
+                    SettingsDialog.show(activity)
                 }
 
                 // prefer inserting above the logout button; fallback to direct insert
@@ -123,7 +124,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
     }
 
     private fun installAboutAwemeLongClickOpenSettingsHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.douYinSettingNewVersionActivity.selfClass?.resolveMethod(
+        return packageInstance.douYinSettingNewVersionActivity.selfClass?.resolveMethodOrNull(
             packageInstance.douYinSettingNewVersionActivity.onResume()
         )?.hook {
             after {
@@ -132,7 +133,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                     return@after
                 }
 
-                val settingsScrollView = activity.getField<ViewGroup>(
+                val settingsScrollView = activity.getFieldOrNull<ViewGroup>(
                     packageInstance.douYinSettingNewVersionActivity.settingsScrollView()
                 ) ?: run {
                     YLog.error("$TAG: settings scroll view field not found")
@@ -148,7 +149,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                     YLog.debug("$TAG: attaching long click listener on about_ame view to open settings dialog")
                 }
                 aboutAwemeView.setOnLongClickListener {
-                    activity.startActivity(Intent(activity, SettingsScreen::class.java))
+                    SettingsDialog.show(activity)
                     true
                 }
             }
@@ -163,7 +164,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
     }
 
     private fun installLaunchStartSettingsIntentHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.mainActivity.selfClass?.resolveMethod(
+        return packageInstance.mainActivity.selfClass?.resolveMethodOrNull(
             packageInstance.mainActivity.onResume()
         )?.hook {
             before {
@@ -178,7 +179,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                         YLog.debug("$TAG: start-settings flag detected in onResume intent, showing settings dialog")
                     }
                     activity.intent?.removeExtra("douyinenhancer_start_settings")
-                    activity.startActivity(Intent(activity, SettingsScreen::class.java))
+                    SettingsDialog.show(activity)
                     removeSelf {
                         if (verbose) {
                             YLog.debug("$TAG: settings dialog shown, unregistering onResume hook to prevent re-show")
@@ -197,7 +198,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
     }
 
     private fun installIncomingStartSettingsIntentHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.mainActivity.selfClass?.resolveMethod(
+        return packageInstance.mainActivity.selfClass?.resolveMethodOrNull(
             packageInstance.mainActivity.onNewIntent()
         )?.hook {
             before {
@@ -213,7 +214,7 @@ object SettingsEntryHooker : YukiBaseHooker() {
                         YLog.debug("$TAG: start-settings flag detected in onNewIntent, showing settings dialog")
                     }
                     intent.removeExtra("douyinenhancer_start_settings")
-                    activity.startActivity(Intent(activity, SettingsScreen::class.java))
+                    SettingsDialog.show(activity)
                 }
             }
         }?.result {

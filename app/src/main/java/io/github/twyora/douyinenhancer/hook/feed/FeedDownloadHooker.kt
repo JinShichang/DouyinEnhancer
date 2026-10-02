@@ -8,12 +8,12 @@ import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.HookTransaction
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.getStaticField
-import io.github.twyora.douyinenhancer.utils.invokeMethod
-import io.github.twyora.douyinenhancer.utils.invokeStaticMethod
-import io.github.twyora.douyinenhancer.utils.resolveMethod
-import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
+import io.github.twyora.douyinenhancer.utils.getStaticFieldOrNull
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.invokeStaticMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
+import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 
 @HookOnMainProcess
 object FeedDownloadHooker : YukiBaseHooker() {
@@ -48,7 +48,7 @@ object FeedDownloadHooker : YukiBaseHooker() {
     }
 
     private fun installForceActionStatusNormalHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.absPermissionChecker.selfClass?.resolveMethod(
+        return packageInstance.absPermissionChecker.selfClass?.resolveMethodOrNull(
             packageInstance.absPermissionChecker.getActionCheckResult()
         )?.hook {
             after {
@@ -58,14 +58,14 @@ object FeedDownloadHooker : YukiBaseHooker() {
                     )
                     return@after
                 }
-                val actionStatus = actionCheckResult.getField<Any>(
+                val actionStatus = actionCheckResult.getFieldOrNull<Any>(
                     packageInstance.actionCheckResult.actionStatus()
                 ) ?: run {
                     YLog.warn("$TAG: action status is null")
                     return@after
                 }
 
-                val normalStatus = packageInstance.actionStatus.selfClass?.getStaticField<Any>(
+                val normalStatus = packageInstance.actionStatus.selfClass?.getStaticFieldOrNull<Any>(
                     packageInstance.actionStatus.normal()
                 )
 
@@ -73,7 +73,7 @@ object FeedDownloadHooker : YukiBaseHooker() {
                     if (verbose) {
                         YLog.debug("$TAG: forcing action status from $actionStatus to $normalStatus to allow download")
                     }
-                    actionCheckResult.setField(
+                    actionCheckResult.setFieldOrNull(
                         packageInstance.actionCheckResult.actionStatus(),
                         normalStatus
                     )
@@ -90,12 +90,12 @@ object FeedDownloadHooker : YukiBaseHooker() {
     }
 
     private fun installOverrideAwemeDownloadStatusHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.galleryShareHelper.selfClass?.resolveMethod(
+        return packageInstance.galleryShareHelper.selfClass?.resolveMethodOrNull(
             packageInstance.galleryShareHelper.startDownload()
         )?.hook {
             before {
                 val aweme = args[0] ?: return@before
-                val downloadStatus = aweme.invokeMethod<Int>(
+                val downloadStatus = aweme.invokeMethodOrNull<Int>(
                     packageInstance.aweme.getDownloadStatus()
                 )
 
@@ -107,9 +107,9 @@ object FeedDownloadHooker : YukiBaseHooker() {
                     if (verbose) {
                         YLog.debug("$TAG: resetting aweme download status from $downloadStatus to 0 to allow download")
                     }
-                    aweme.getField<Any>(
+                    aweme.getFieldOrNull<Any>(
                         packageInstance.aweme.status()
-                    )?.setField(
+                    )?.setFieldOrNull(
                         packageInstance.awemeStatus.downloadStatus(),
                         0
                     )
@@ -126,7 +126,7 @@ object FeedDownloadHooker : YukiBaseHooker() {
     }
 
     private fun installOverridePrivacyVideoDownloadStatusHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.sharePrivacyVideoApi.selfClass?.resolveMethod(
+        return packageInstance.sharePrivacyVideoApi.selfClass?.resolveMethodOrNull(
             packageInstance.sharePrivacyVideoApi.getDownloadStatus()
         )?.hook {
             before {
@@ -139,16 +139,16 @@ object FeedDownloadHooker : YukiBaseHooker() {
                     YLog.error("$TAG: failed to build the allowed-download response")
                     return@before
                 }
-                response.setField(
+                response.setFieldOrNull(
                     packageInstance.sharePrivacyVideoApi.privacyVideoResponse.msg(),
                     ""
                 )
-                response.setField(
+                response.setFieldOrNull(
                     packageInstance.sharePrivacyVideoApi.privacyVideoResponse.status(),
                     0
                 )
 
-                val observable = packageInstance.rxObservable.selfClass?.invokeStaticMethod<Any>(
+                val observable = packageInstance.rxObservable.selfClass?.invokeStaticMethodOrNull<Any>(
                     packageInstance.rxObservable.just(),
                     response
                 ) ?: run {

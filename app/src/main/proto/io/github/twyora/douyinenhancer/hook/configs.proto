@@ -4,7 +4,6 @@ package io.github.twyora.douyinenhancer.hook;
 
 option java_outer_classname = "Configs";
 option java_package = "io.github.twyora.douyinenhancer.hook";
-option optimize_for = LITE_RUNTIME;
 
 message Class {
   optional string name = 1;
@@ -178,12 +177,16 @@ message ImageUrlStruct {
 
 message FeedResponseHandler {
   optional Class class = 1;
-  optional Method processAwemeList = 2;
+  optional Method process_aweme_list = 3;
+
+  reserved 2;
 }
 
 message CommentLongPressWhiteListProvider {
   optional Class class = 1;
-  optional Method buildWhiteList = 2;
+  optional Method build_white_list = 3;
+
+  reserved 2;
 }
 
 message MiscDownloadAddrUtil {
@@ -240,7 +243,9 @@ message GalleryShareHelper {
 message SharePrivacyVideoApi {
   optional Class class = 1;
   optional SharePrivacyVideoResponse privacy_video_response = 2;
-  optional Method getDownloadStatus = 3;
+  optional Method get_download_status = 4;
+
+  reserved 3;
 }
 
 message SharePrivacyVideoResponse {
@@ -392,6 +397,18 @@ message AbsTask {
   optional Method get_target_file_paths = 2;
 }
 
+message TabNode {
+  optional Class class = 1;
+  optional Field tab_id = 2;
+  optional Field children = 3;
+}
+
+message MPFBottomTabComponent {
+  optional Class class = 1;
+  optional Field tab_root = 2;
+  optional Method build_tab_views = 3;
+}
+
 message HookInfo {
   uint64 last_update_time = 1;
   uint32 module_version_code = 2;
@@ -447,6 +464,8 @@ message HookInfo {
   optional StoryServiceImpl story_service_impl = 61;
   optional AbsTask abs_task = 62;
   optional VideoPlayerStatus video_player_status = 63;
+  optional TabNode tab_node = 64;
+  optional MPFBottomTabComponent mpf_bottom_tab_component = 65;
 
   reserved 13, 18, 32, 35, 36, 38, 39, 40, 55;
 }

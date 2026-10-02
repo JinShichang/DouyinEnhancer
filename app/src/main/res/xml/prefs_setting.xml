@@ -84,6 +84,10 @@
             android:title="@string/playback_component_block_dialog_title"
             android:summary="@string/playback_component_block_dialog_summary" />
 
+        <Preference
+            android:key="bottom_tab_block"
+            android:title="@string/bottom_tab_block_dialog_title" />
+
         <SwitchPreference
             android:defaultValue="false"
             android:key="keep_danmaku_visible"
@@ -120,6 +124,20 @@
             android:key="disable_verbose_logs"
             android:title="@string/pref_module_disable_verbose_logs_title"
             android:summary="@string/pref_module_disable_verbose_logs_summary" />
+
+        <Preference
+            android:key="invalid_hook_info"
+            android:title="@string/pref_module_invalid_hook_info_title"
+            android:summary="@string/pref_module_invalid_hook_info_summary" />
+
+        <Preference
+            android:defaultValue="false"
+            android:key="load_custom_hook_info"
+            android:title="@string/pref_module_load_custom_hook_info_title" />
+
+        <Preference
+            android:key="reset_custom_hook_info"
+            android:title="@string/pref_module_reset_custom_hook_info_title" />
     </PreferenceCategory>
 
     <PreferenceCategory
@@ -175,8 +193,7 @@
         <Preference
             android:key="back_then"
             android:title="@string/pref_about_back_then_title"
-            android:summary="@string/pref_about_back_then_summary"></Preference>
-
+            android:summary="@string/pref_about_back_then_summary" />
     </PreferenceCategory>
 
 </PreferenceScreen>

@@ -1,6 +1,7 @@
 @file:Suppress("ktlint:standard:no-wildcard-imports")
 
 import com.google.protobuf.gradle.*
+import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -36,9 +37,9 @@ android {
      */
     val isKeyStoreAvailable = try {
         gropify.keystore.path.isNotBlank() &&
-                gropify.keystore.password.isNotBlank() &&
-                gropify.key.alias.isNotBlank() &&
-                gropify.key.password.isNotBlank()
+            gropify.keystore.password.isNotBlank() &&
+            gropify.key.alias.isNotBlank() &&
+            gropify.key.password.isNotBlank()
     } catch (_: Exception) {
         false
     }
@@ -62,7 +63,7 @@ android {
             dimension = "tier"
             versionCode = defaultConfig.versionCode?.plus(1)
             versionName = "${defaultConfig.versionName?.split(Regex("\\s+-\\s+"))?.get(0)}-CI.${
-                getGitHeadRefsSuffix(rootProject)
+                resolveGitCommitSuffix(rootProject)
             }"
         }
         create("App") {
@@ -144,14 +145,16 @@ protobuf {
     generateProtoTasks {
         all().forEach { task ->
             task.plugins {
-                id("java") {
-                    option("lite")
-                }
-                id("kotlin") {
-                    option("lite")
-                }
+                id("java")
+                id("kotlin")
             }
         }
+    }
+}
+
+buildscript {
+    dependencies {
+        classpath(libs.jgit)
     }
 }
 
@@ -172,9 +175,11 @@ dependencies {
     implementation(libs.luckypray.dexkit)
     implementation(libs.gifkt)
     implementation(libs.fastkv)
-    implementation(libs.protobuf.javalite)
-    implementation(libs.protobuf.kotlin.lite)
+    implementation(libs.protobuf.java)
+    implementation(libs.protobuf.java.util)
+    implementation(libs.protobuf.kotlin)
     implementation(libs.commons.collections4)
+    implementation(libs.json.canonicalization)
 
     // ---------------------- HOOK ----------------------
     // 基础依赖
@@ -203,30 +208,18 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
 }
 
-/**
- * from [MiuiHomeR](https://github.com/qqlittleice/MiuiHome_R/blob/main/app/build.gradle.kts)
- * 用于获取 git commit id
- */
-fun getGitHeadRefsSuffix(project: Project): String {
-    // .git/HEAD描述当前目录所指向的分支信息，内容示例："ref: refs/heads/master\n"
-    val headFile = File(project.rootProject.projectDir, ".git" + File.separator + "HEAD")
-    if (headFile.exists()) {
-        val string: String = headFile.readText(Charsets.UTF_8)
-        val string1 = string.replace(Regex("""ref:|\s"""), "")
-        val result = if (string1.isNotBlank() && string1.contains('/')) {
-            val refFilePath = ".git" + File.separator + string1
-            // 根据HEAD读取当前指向的hash值，路径示例为：".git/refs/heads/master"
-            val refFile = File(project.rootProject.projectDir, refFilePath)
-            // 索引文件内容为hash值+"\n"，
-            // 示例："90312cd9157587d11779ed7be776e3220050b308\n"
-            refFile.readText(Charsets.UTF_8).replace(Regex("""\s"""), "").subSequence(0, 7)
-        } else {
-            string.take(7)
-        }
-        println("commit_id: $result")
-        return result.toString()
-    } else {
-        println("WARN: .git/HEAD does NOT exist")
-        return ""
+fun resolveGitCommitSuffix(project: Project) = runCatching {
+    val builder = FileRepositoryBuilder().readEnvironment().findGitDir(
+        project.projectDir
+    ) ?: error(".git directory not found in ${project.projectDir}")
+
+    builder.build().use { repo ->
+        val objId = repo.resolve("HEAD^{commit}") ?: error(
+            "cannot resolve HEAD commit"
+        )
+
+        objId.name.take(7)
     }
-}
+}.onFailure {
+    println("failed to get git commit id: ${it.message}")
+}.getOrDefault("")

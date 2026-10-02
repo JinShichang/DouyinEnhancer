@@ -11,12 +11,12 @@ import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.FileTypeDetector
 import io.github.twyora.douyinenhancer.utils.HookTransaction
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.invokeMethod
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
-import io.github.twyora.douyinenhancer.utils.invokeStaticMethod
-import io.github.twyora.douyinenhancer.utils.resolveMethod
-import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.invokeStaticMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
+import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 import java.io.FileInputStream
 import org.json.JSONObject
 
@@ -57,7 +57,7 @@ object CommentAudioHooker : YukiBaseHooker() {
     }
 
     private fun installForceSaveImageVisibleHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.saveImageActionItem.selfClass?.resolveMethod(
+        return packageInstance.saveImageActionItem.selfClass?.resolveMethodOrNull(
             packageInstance.saveImageActionItem.isVisible()
         )?.hook {
             after {
@@ -66,11 +66,11 @@ object CommentAudioHooker : YukiBaseHooker() {
                 }
 
                 // if the comment contains audio, show the save image button
-                val commentAudio = instance.getField<Any>(
+                val commentAudio = instance.getFieldOrNull<Any>(
                     packageInstance.commentLongPressItemModel.commentActionParams()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.commentActionParams.comment()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.comment.commentAudio()
                 )
                 if (commentAudio != null) {
@@ -91,7 +91,7 @@ object CommentAudioHooker : YukiBaseHooker() {
     }
 
     private fun installAddSaveImageToWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.commentLongPressWhiteListProvider.selfClass?.resolveMethod(
+        return packageInstance.commentLongPressWhiteListProvider.selfClass?.resolveMethodOrNull(
             packageInstance.commentLongPressWhiteListProvider.buildWhiteList()
         )?.hook {
             after {
@@ -104,9 +104,9 @@ object CommentAudioHooker : YukiBaseHooker() {
                     return@after
                 }
 
-                val commentAudio = args[0]?.getField<Any>(
+                val commentAudio = args[0]?.getFieldOrNull<Any>(
                     packageInstance.commentActionParams.comment()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.comment.commentAudio()
                 )
                 if (commentAudio != null) {
@@ -127,20 +127,20 @@ object CommentAudioHooker : YukiBaseHooker() {
     }
 
     private fun installInjectAudioUrlOnSaveClickHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.saveImageActionItem.selfClass?.resolveMethod(
+        return packageInstance.saveImageActionItem.selfClass?.resolveMethodOrNull(
             packageInstance.saveImageActionItem.onClick()
         )?.hook {
             before {
-                val comment = instance.getField<Any>(
+                val comment = instance.getFieldOrNull<Any>(
                     packageInstance.commentLongPressItemModel.commentActionParams()
-                )?.getField<Any>(
+                )?.getFieldOrNull<Any>(
                     packageInstance.commentActionParams.comment()
                 ) ?: return@before
 
-                val commentAudio = comment.getField<Any>(
+                val commentAudio = comment.getFieldOrNull<Any>(
                     packageInstance.comment.commentAudio()
                 ) ?: return@before
-                val commentAudioContent = commentAudio.getField<String>(
+                val commentAudioContent = commentAudio.getFieldOrNull<String>(
                     packageInstance.commentAudioStruct.content()
                 ) ?: return@before
 
@@ -183,17 +183,17 @@ object CommentAudioHooker : YukiBaseHooker() {
     }
 
     private fun installSaveDownloadedAudioHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.commentImageSaveDownloadListener.selfClass?.resolveMethod(
+        return packageInstance.commentImageSaveDownloadListener.selfClass?.resolveMethodOrNull(
             packageInstance.commentImageSaveDownloadListener.onSuccessed()
         )?.hook {
             before {
                 val downloadInfo = args[0] ?: return@before
 
-                val sourcePath = downloadInfo.invokeMethod<String>(
+                val sourcePath = downloadInfo.invokeMethodOrNull<String>(
                     packageInstance.downloadInfo.getTargetFilePath()
                 ) ?: return@before
                 val ftypeInfo = FileTypeDetector.detect(sourcePath)
-                val dlUrl = downloadInfo.getField<String>(
+                val dlUrl = downloadInfo.getFieldOrNull<String>(
                     packageInstance.downloadInfo.url()
                 ) ?: return@before
 
@@ -210,7 +210,7 @@ object CommentAudioHooker : YukiBaseHooker() {
                 }
 
                 val targetFileName = "audio_${
-                    packageInstance.digestUtils.selfClass?.invokeStaticMethod<String>(
+                    packageInstance.digestUtils.selfClass?.invokeStaticMethodOrNull<String>(
                         packageInstance.digestUtils.md5Hex(),
                         dlUrl + System.currentTimeMillis().toString()
                     )
@@ -220,24 +220,24 @@ object CommentAudioHooker : YukiBaseHooker() {
                     YLog.debug("$TAG: audio file name: $targetFileName")
                 }
 
-                val context = instance.getField<Any>(
+                val context = instance.getFieldOrNull<Any>(
                     packageInstance.commentImageSaveDownloadListener.listenerProviderParam()
-                )?.getField<Context>(
+                )?.getFieldOrNull<Context>(
                     packageInstance.listenerProviderParam.context()
                 ) ?: run {
                     YLog.error("$TAG: unable to get Context from download listener")
                     return@before
                 }
 
-                val targetUri = packageInstance.ugFileUtils.selfClass?.invokeStaticMethod<Uri>(
+                val targetUri = packageInstance.ugFileUtils.selfClass?.invokeStaticMethodOrNull<Uri>(
                     packageInstance.ugFileUtils.getAudioUri(),
                     context,
                     targetFileName,
                     ftypeInfo.mimeType,
                     "Music/douyin/audio",
-                    instance.getField<Any>(
+                    instance.getFieldOrNull<Any>(
                         packageInstance.commentImageSaveDownloadListener.listenerProviderParam()
-                    )?.getField<Any>(
+                    )?.getFieldOrNull<Any>(
                         packageInstance.listenerProviderParam.cert()
                     )
                 ) ?: run {
@@ -279,14 +279,14 @@ object CommentAudioHooker : YukiBaseHooker() {
     }
 
     private fun injectAudioUrl(comment: Any, audioUrls: List<String>): Boolean {
-        val existingImageUrlList = comment.getField<List<*>>(
+        val existingImageUrlList = comment.getFieldOrNull<List<*>>(
             packageInstance.comment.imageList()
         )
         val imageUrlList = if (existingImageUrlList.isNullOrEmpty()) {
             val newImageUrlList = listOf(
                 packageInstance.commentImageStruct.selfClass?.createInstance()
             )
-            comment.setField(
+            comment.setFieldOrNull(
                 packageInstance.comment.imageList(),
                 newImageUrlList
             )
@@ -295,12 +295,12 @@ object CommentAudioHooker : YukiBaseHooker() {
             existingImageUrlList
         }
 
-        val existingImageUrlModel = imageUrlList.first()?.getField<Any?>(
+        val existingImageUrlModel = imageUrlList.first()?.getFieldOrNull<Any?>(
             packageInstance.commentImageStruct.downloadUrl()
         )
         val imageUrlModel = if (existingImageUrlModel == null) {
             val newImageUrlModel = packageInstance.urlModel.selfClass?.createInstance()
-            imageUrlList.first()?.setField(
+            imageUrlList.first()?.setFieldOrNull(
                 packageInstance.commentImageStruct.downloadUrl(),
                 newImageUrlModel
             )
@@ -309,7 +309,7 @@ object CommentAudioHooker : YukiBaseHooker() {
             existingImageUrlList
         } ?: return false
 
-        imageUrlModel.setField(
+        imageUrlModel.setFieldOrNull(
             packageInstance.urlModel.urlList(),
             audioUrls
         )
