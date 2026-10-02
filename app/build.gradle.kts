@@ -116,7 +116,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    aaptOptions {
+    androidResources {
         additionalParameters += listOf("--package-id", "0x7E", "--allow-reserved-package-id")
     }
 }
