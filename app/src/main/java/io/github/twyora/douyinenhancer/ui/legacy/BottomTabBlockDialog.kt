@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package io.github.twyora.douyinenhancer.ui.legacy
 
 import android.app.Activity
