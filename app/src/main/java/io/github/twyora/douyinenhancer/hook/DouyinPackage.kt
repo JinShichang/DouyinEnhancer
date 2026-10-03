@@ -120,6 +120,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     val videoPlayerStatus = VideoPlayerStatusModule(hookInfo.videoPlayerStatus, classLoader)
     val videoEvent = VideoEventModule(hookInfo.videoEvent, classLoader)
     val cleanModePresenter = CleanModePresenterModule(hookInfo.cleanModePresenter, classLoader)
+    val cleanModeChrome = CleanModeChromeModule(hookInfo.cleanModeChrome, classLoader)
+    val nativeCleanMode = NativeCleanModeModule(hookInfo.nativeCleanMode, classLoader)
     val danmakuView = DanmakuViewModule(hookInfo.danmakuView, classLoader)
     val fluxComponentId = FluxComponentIdModule(hookInfo.fluxComponentId, classLoader)
     val fluxComponentDataAction = FluxComponentDataActionModule(hookInfo.fluxComponentDataAction, classLoader)
@@ -935,6 +937,29 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         )
     }
 
+    class NativeCleanModeModule internal constructor(private val configs: Configs.NativeCleanMode, private val classLoader: ClassLoader) {
+        val serviceClass by weak { configs.serviceClass.nameOrNull?.toClass(classLoader) }
+        val commandClass by weak { configs.commandClass.nameOrNull?.toClass(classLoader) }
+
+        fun serviceInstance() = Method(configs.serviceInstance.nameOrNull, emptyList())
+        fun toggle() = Method(configs.toggle.nameOrNull, configs.toggle.parameters.valuesListOrNull)
+        fun inverse() = Method(configs.inverse.nameOrNull, emptyList())
+        fun autoQuit() = Field(configs.autoQuit.nameOrNull)
+        fun content() = Field(configs.content.nameOrNull)
+    }
+
+    class CleanModeChromeModule internal constructor(private val configs: Configs.CleanModeChrome, private val classLoader: ClassLoader) {
+        val topViewClass by weak { configs.topViewClass.nameOrNull?.toClass(classLoader) }
+        val bottomViewClass by weak { configs.bottomViewClass.nameOrNull?.toClass(classLoader) }
+        val uiServiceClass by weak { configs.uiServiceClass.nameOrNull?.toClass(classLoader) }
+        fun applyTopVisibility() = Method(configs.applyTopVisibility.nameOrNull, configs.applyTopVisibility.parameters.valuesListOrNull)
+        fun applyBottomVisibility() =
+            Method(configs.applyBottomVisibility.nameOrNull, configs.applyBottomVisibility.parameters.valuesListOrNull)
+        fun uiServiceInstance() = Field(configs.uiServiceInstance.nameOrNull)
+        fun topContainerId() = Method(configs.topContainerId.nameOrNull, emptyList())
+        fun topShadowId() = Method(configs.topShadowId.nameOrNull, emptyList())
+    }
+
     class CleanModePresenterModule internal constructor(
         private val configs: Configs.CleanModePresenter,
         private val classLoader: ClassLoader
@@ -948,9 +973,11 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
             configs.enterCleanMode.parameters.valuesListOrNull
         )
 
-        fun setVisibility() = Method(
-            configs.setVisibility.nameOrNull,
-            configs.setVisibility.parameters.valuesListOrNull
+        fun handleView() = Method(configs.handleView.nameOrNull, configs.handleView.parameters.valuesListOrNull)
+
+        fun collectHiddenViews() = Method(
+            configs.collectHiddenViews.nameOrNull,
+            configs.collectHiddenViews.parameters.valuesListOrNull
         )
     }
 
@@ -962,6 +989,15 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun onAttachedToWindow() = Method(
             configs.onAttachedToWindow.nameOrNull,
             configs.onAttachedToWindow.parameters.valuesListOrNull
+        )
+
+        val containerClass by weak {
+            configs.containerClass.nameOrNull?.toClass(classLoader)
+        }
+
+        fun createContainer() = Method(
+            configs.createContainer.nameOrNull,
+            configs.createContainer.parameters.valuesListOrNull
         )
     }
 
@@ -3297,6 +3333,18 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                 }
 
+                runCatching {
+                    nativeCleanMode = NativeCleanModeSymbols.resolve(bridge)
+                }.onFailure {
+                    YLog.error("$TAG: failed to resolve native clean mode", it)
+                }
+
+                runCatching {
+                    cleanModeChrome = NativeCleanModeChromeSymbols.resolve(bridge)
+                }.onFailure {
+                    YLog.error("$TAG: failed to resolve clean mode chrome protection", it)
+                }
+
                 cleanModePresenter = cleanModePresenter {
                     runCatching {
                         val cleanModePresenterClassData = bridge.getClassData(
@@ -3317,27 +3365,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                 }
                             }.singleOrNull()
                         }
-                        val setVisibilityMethodData = cleanModePresenterClassData?.let {
-                            bridge.findMethod {
-                                searchClasses = listOf(it)
-                                matcher {
-                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
-                                    returnType = "void"
-                                    params {
-                                        add("android.view.View")
-                                        add("int")
-                                    }
-                                    invokeMethods {
-                                        add {
-                                            descriptor = "Landroid/view/View;->setVisibility(I)V"
-                                        }
-                                    }
-                                }
-                            }.singleOrNull()
-                        }
-
                         if (cleanModePresenterClassData == null ||
-                            enterCleanModeMethodData == null || setVisibilityMethodData == null
+                            enterCleanModeMethodData == null
                         ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
                             return@cleanModePresenter
@@ -3353,12 +3382,28 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                 values.addAll(enterCleanModeMethodData.paramTypeNames)
                             }
                         }
-                        setVisibility = method {
-                            name = setVisibilityMethodData.methodName
-                            parameters = MethodKt.parameters {
-                                values.clear()
-                                values.addAll(setVisibilityMethodData.paramTypeNames)
+                        val handleViewMethod = bridge.findMethod {
+                            searchClasses = listOf(cleanModePresenterClassData)
+                            matcher {
+                                paramTypes("android.view.View", "int", "int", "boolean")
+                                usingStrings("no VisibilityManager for view: ")
                             }
+                        }.single()
+                        handleView = method {
+                            name = handleViewMethod.name
+                            parameters = MethodKt.parameters { values.addAll(handleViewMethod.paramTypeNames) }
+                        }
+                        val collectHiddenMethod = bridge.findMethod {
+                            searchClasses = listOf(cleanModePresenterClassData)
+                            matcher {
+                                modifiers = Modifier.PUBLIC or Modifier.STATIC
+                                paramTypes("android.view.View", "java.util.List")
+                                returnType = "java.util.List"
+                            }
+                        }.single()
+                        collectHiddenViews = method {
+                            name = collectHiddenMethod.name
+                            parameters = MethodKt.parameters { values.addAll(collectHiddenMethod.paramTypeNames) }
                         }
                     }.onFailure {
                         YLog.error(populateFailedMsg.format(TAG), it)
@@ -3371,6 +3416,15 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                     onAttachedToWindow = method {
                         name = "onAttachedToWindow"
+                    }
+                    containerClass = class_ {
+                        name = "com.ss.android.ugc.aweme.feed.danmaku.ultra.DanmakuModule"
+                    }
+                    createContainer = method {
+                        name = "onCreateView"
+                        parameters = MethodKt.parameters {
+                            values.addAll(listOf("android.content.Context", "android.view.ViewGroup"))
+                        }
                     }
                 }
 

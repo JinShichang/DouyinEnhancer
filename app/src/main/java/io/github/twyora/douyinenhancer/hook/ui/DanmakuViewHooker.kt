@@ -1,14 +1,17 @@
 package io.github.twyora.douyinenhancer.hook.ui
 
 import android.view.View
-import androidx.collection.ArraySet
 import com.highcapable.yukihookapi.hook.core.YukiMemberHookCreator
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
+import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
+import io.github.twyora.douyinenhancer.utils.invokeStaticMethod
 import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
+import java.util.Collections
+import java.util.WeakHashMap
 
 @HookOnMainProcess
 object DanmakuViewHooker : YukiBaseHooker() {
@@ -20,21 +23,43 @@ object DanmakuViewHooker : YukiBaseHooker() {
     private val verbose
         get() = !ConfigManager.module.verboseDisabled.value
 
-    private val danmakuViewIds = ArraySet<Int>().apply {
-        add(View.generateViewId())
-    }
+    private val danmakuViews = Collections.newSetFromMap(WeakHashMap<View, Boolean>())
 
     override fun onHook() {
-        if (!ConfigManager.ui.keepDanmakuVisible.value) {
+        if (!ConfigManager.ui.keepDanmakuVisible.value && !ConfigManager.ui.cleanMode.value) {
             if (verbose) {
                 YLog.debug("$TAG: keep danmaku visible disabled, skip danmaku hooks")
             }
             return
         }
+        installRegisterDanmakuContainerHook()
         installAssignDanmakuViewIdHook()
         installAddDanmakuViewIdToCleanModeWhiteListHook()
-        installBlockDanmakuViewHidingHook()
+        installPartitionDanmakuAncestorHook()
     }
+
+    private fun register(view: View) {
+        if (view.id == View.NO_ID) view.id = View.generateViewId()
+        danmakuViews.add(view)
+    }
+
+    private fun installRegisterDanmakuContainerHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.danmakuView.containerClass?.resolveMethodOrNull(
+            packageInstance.danmakuView.createContainer()
+        )?.hook {
+            after {
+                // Both traditional and Compose renderers live in this dedicated container.
+                // Register before attachment so the first clean command can already preserve it.
+                register(checkNotNull(result as? View) { "Danmaku module did not create a View" })
+            }
+        }?.result {
+            onConductFailure { _, throwable ->
+                YLog.error("$TAG: failed to register danmaku container", throwable)
+            }
+            onHookingFailure { throwable ->
+                YLog.error("$TAG: failed to hook danmaku container creation", throwable)
+            }
+        }
 
     private fun installAssignDanmakuViewIdHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
         return packageInstance.danmakuView.selfClass?.resolveMethodOrNull(
@@ -46,18 +71,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
                     return@after
                 }
 
-                if (danmakuView.id == View.NO_ID) {
-                    val danmakuViewId = danmakuViewIds.first()
-                    if (verbose) {
-                        YLog.debug("$TAG: assign danmaku view id($danmakuViewId) to view without id")
-                    }
-                    danmakuView.id = danmakuViewId
-                } else {
-                    if (verbose) {
-                        YLog.debug("$TAG: collect existing danmaku view id(${danmakuView.id})")
-                    }
-                    danmakuViewIds.add(danmakuView.id)
-                }
+                register(danmakuView)
             }
         }?.result {
             onConductFailure { _, throwable ->
@@ -69,28 +83,16 @@ object DanmakuViewHooker : YukiBaseHooker() {
         }
     }
 
-    private fun installAddDanmakuViewIdToCleanModeWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.cleanModePresenter.selfClass?.resolveMethodOrNull(
+    private fun installAddDanmakuViewIdToCleanModeWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.cleanModePresenter.selfClass?.resolveMethodOrNull(
             packageInstance.cleanModePresenter.enterCleanMode()
         )?.hook {
             before {
-                // The whiteList argument's position in the parameter list varies across host versions,
-                // resolve it at runtime
-                val whiteList = args.firstNotNullOfOrNull {
-                    @Suppress("UNCHECKED_CAST")
-                    it as? MutableList<Int>
-                } ?: run {
-                    YLog.error("$TAG: whiteList not found in the argument list")
-                    return@before
-                }
-
-                if (verbose) {
-                    YLog.debug("$TAG: add danmaku view ids into clean mode white list")
-                }
-
-                danmakuViewIds.forEach {
-                    whiteList.add(it)
-                }
+                val index = checkNotNull(packageInstance.cleanModePresenter.enterCleanMode().parameters).indexOf("java.util.List")
+                check(index >= 0) { "Clean mode whitelist parameter is missing from HookInfo" }
+                val whiteList = checkNotNull(args[index]) as List<*>
+                // Native traversal keeps only these descendants and hides their siblings.
+                args[index] = ArrayList((whiteList + danmakuViews.map { it.id }).distinct())
             }
         }?.result {
             onConductFailure { _, throwable ->
@@ -100,47 +102,37 @@ object DanmakuViewHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook clean mode white list adding", throwable)
             }
         }
-    }
 
-    private fun installBlockDanmakuViewHidingHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.cleanModePresenter.selfClass?.resolveMethodOrNull(
-            packageInstance.cleanModePresenter.setVisibility()
-        )?.hook {
+    private fun installPartitionDanmakuAncestorHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
+        val presenter = packageInstance.cleanModePresenter
+        val presenterClass = presenter.selfClass ?: return null
+        return presenterClass.resolveMethodOrNull(presenter.handleView())?.hook {
             before {
-                val view = args[0] as? View ?: run {
-                    YLog.error("$TAG: ${args[0]?.javaClass?.name} is not a View")
-                    return@before
-                }
-                val visibility = args[1] as? Int ?: run {
-                    YLog.error("$TAG: ${args[1]?.javaClass?.name} is not a visibility value int")
-                    return@before
-                }
-                if (visibility == View.VISIBLE) {
-                    return@before
-                }
-
-                if (danmakuViewIds.none {
-                        view.findViewById<View?>(it) != null
-                    }
-                ) {
-                    return@before
-                }
-                YLog.info(
-                    "$TAG: ${view::class.qualifiedName}{id=0x${
-                        view.id.toString(
-                            16
-                        )
-                    }} is a danmaku view holder trying to hide itself; intercept it"
+                val view = args[0] as View
+                val ids = danmakuViews.map { it.id }
+                if (ids.none { view.findViewById<View>(it) != null }) return@before
+                // The host handles its slide-out container directly, bypassing the whitelist.
+                // Split that request with the host's own traversal so siblings still hide and
+                // retain the original priority/restoration policy, while danmaku stays visible.
+                val targets = checkNotNull(
+                    presenterClass.invokeStaticMethod<List<View>>(
+                        presenter.collectHiddenViews(),
+                        view,
+                        ArrayList(ids)
+                    )
                 )
-
-                resultNull()
+                check(targets.none { it === view }) { "Native traversal did not preserve danmaku" }
+                targets.forEach { target ->
+                    instance.invokeMethodOnly(presenter.handleView(), target, args[1], args[2], args[3])
+                }
+                result = null
             }
         }?.result {
             onConductFailure { _, throwable ->
-                YLog.error("$TAG: failed to block danmaku view hiding", throwable)
+                YLog.error("$TAG: failed to partition danmaku ancestor", throwable)
             }
             onHookingFailure { throwable ->
-                YLog.error("$TAG: failed to hook for blocking danmaku view hiding", throwable)
+                YLog.error("$TAG: failed to hook native clean view handling", throwable)
             }
         }
     }
