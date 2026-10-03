@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION")
 
-package io.github.twyora.douyinenhancer.ui
+package io.github.twyora.douyinenhancer.ui.legacy
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -18,7 +18,13 @@ import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
 import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 
-class BottomTabBlockDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
+class BottomTabBlockDialog(context: Context) :
+    AlertDialog.Builder(
+        ContextThemeWrapper(
+            context,
+            R.style.MainTheme
+        )
+    ) {
     class PrefsFragment : PreferenceFragment() {
         @Deprecated("Deprecated in Java")
         override fun onCreate(savedInstanceState: Bundle?) {

@@ -1,179 +1,174 @@
-// Referenced from [BiliRoaming](https://github.com/yujincheng08/BiliRoaming/blob/master/app/src/main/java/me/iacn/biliroaming/MainActivity.kt)
-
-@file:Suppress("DEPRECATION")
-
 package io.github.twyora.douyinenhancer.ui
 
-import android.app.Activity
-import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.preference.Preference
-import android.preference.PreferenceFragment
-import android.preference.SwitchPreference
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.hook.log.YLog
-import io.github.twyora.douyinenhancer.BuildConfig
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import io.github.twyora.douyinenhancer.R
-import io.github.twyora.douyinenhancer.utils.toast
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Locale
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
+import io.github.twyora.douyinenhancer.ui.content.home.HomeContent
+import io.github.twyora.douyinenhancer.ui.content.home.HomeContentUiActions
+import io.github.twyora.douyinenhancer.ui.content.home.HomeContentUiState
+import io.github.twyora.douyinenhancer.ui.content.home.HomeContentViewModel
+import io.github.twyora.douyinenhancer.ui.navigation.AppRoutes
+import io.github.twyora.douyinenhancer.utils.openUrl
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        fragmentManager.beginTransaction().replace(
-            android.R.id.content,
-            PrefsFragment()
-        ).commit()
-    }
 
-    class PrefsFragment :
-        PreferenceFragment(),
-        Preference.OnPreferenceChangeListener,
-        Preference.OnPreferenceClickListener {
-        private val scope = MainScope()
-
-        @Deprecated("Deprecated in Java")
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            addPreferencesFromResource(R.xml.main_activity)
-
-            findPreference("open_module_settings")?.onPreferenceClickListener = this
-            (findPreference("hide_launcher_icon") as? SwitchPreference)?.let {
-                val aliasName = ComponentName(activity, MainActivity::class.java.name + "Alias")
-                val isHidden = activity.packageManager.getComponentEnabledSetting(
-                    aliasName
-                ) == PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                it.isChecked = isHidden
-            }
-            findPreference("hide_launcher_icon")?.onPreferenceChangeListener = this
-            findPreference("version")?.summary = BuildConfig.VERSION_NAME
-            findPreference("build_time")?.summary =
-                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(BuildConfig.BUILD_TIMESTAMP)
-            if (YukiHookAPI.Status.isModuleActive) {
-                val activationStatus = findPreference("activation_status")
-                activationStatus?.title =
-                    context.getString(R.string.pref_about_activation_status_activated_title)
-                activationStatus?.summary =
-                    context.getString(R.string.pref_about_activation_status_activated_summary)
-            }
-
-            checkUpdate()
-        }
-
-        @Deprecated("Deprecated in Java")
-        override fun onDestroy() {
-            super.onDestroy()
-            scope.cancel()
-        }
-
-        @Deprecated("Deprecated in Java")
-        override fun onPreferenceChange(preference: Preference, newValue: Any): Boolean = when (preference.key) {
-            "hide_launcher_icon" -> {
-                val shouldHide = newValue as Boolean
-                val status = if (shouldHide) {
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                } else {
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                }
-
-                val aliasName = ComponentName(activity, MainActivity::class.java.name + "Alias")
-                val packageManager = activity.packageManager
-                if (packageManager.getComponentEnabledSetting(aliasName) != status) {
-                    packageManager.setComponentEnabledSetting(
-                        aliasName,
-                        status,
-                        PackageManager.DONT_KILL_APP
-                    )
-                }
-
-                true
-            }
-
-            else -> false
-        }
-
-        @Deprecated("Deprecated in Java")
-        override fun onPreferenceClick(preference: Preference): Boolean {
-            return when (preference.key) {
-                "open_module_settings" -> {
-                    if (!YukiHookAPI.Status.isModuleActive) {
-                        activity.toast(R.string.pref_about_activation_status_deactivated_summary)
-                        return true
+        setContent {
+            val currLocalContext = LocalContext.current
+            val dark = isSystemInDarkTheme()
+            MaterialTheme(
+                colorScheme = remember(dark) {
+                    val dynamic = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    when {
+                        dynamic && dark -> dynamicDarkColorScheme(currLocalContext)
+                        dynamic -> dynamicLightColorScheme(currLocalContext)
+                        dark -> darkColorScheme()
+                        else -> lightColorScheme()
                     }
-
-                    activity.packageManager.getLaunchIntentForPackage(
-                        "com.ss.android.ugc.aweme"
-                    )?.run {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                        putExtra("douyinenhancer_start_settings", true)
-                        activity.startActivity(this)
-                    }
-                    true
                 }
+            ) {
+                val backstack = rememberNavBackStack(AppRoutes.Home)
+                NavDisplay(
+                    backStack = backstack,
+                    entryProvider = { key ->
+                        when (key) {
+                            AppRoutes.Home -> NavEntry(key) {
+                                HomeScreen()
+                            }
 
-                else -> false
-            }
-        }
-
-        private fun checkUpdate() = scope.launch {
-            val latestReleaseJson = runCatching {
-                withContext(Dispatchers.IO) {
-                    JSONObject(
-                        URL(
-                            context.getString(
-                                R.string.latest_release_api_url
-                            )
-                        ).readText()
-                    )
-                }
-            }.onFailure {
-                YLog.error("$TAG: fetch latest release failed", it)
-            }.getOrNull()
-            if (latestReleaseJson == null) {
-                YLog.debug("$TAG: skip update check, no release data")
-                return@launch
-            }
-
-            val latestReleaseVer = latestReleaseJson.optString("name").removePrefix("v").removePrefix("V")
-            if (latestReleaseVer.isNotBlank() && BuildConfig.VERSION_NAME != latestReleaseVer) {
-                findPreference("version")?.apply {
-                    summary = "${BuildConfig.VERSION_NAME} ($latestReleaseVer)"
-                }
-                findPreference("update")?.apply {
-                    title = context.getString(R.string.pref_about_update_available_title)
-                    summary = latestReleaseJson.optString("body").takeIf {
-                        it.isNotBlank()
-                    }?.let {
-                        if (it.length > 80) {
-                            it.take(80) + "..."
-                        } else {
-                            it
+                            else -> NavEntry(key) {
+                            }
                         }
-                    } ?: context.getString(R.string.pref_about_update_available_summary)
-                }
-                activity.toast(R.string.notify_update_available)
-            } else {
-                findPreference("update")?.apply {
-                    title = context.getString(R.string.pref_about_up_to_date_title)
-                    summary = latestReleaseJson.optString("body").ifEmpty {
-                        context.getString(R.string.pref_about_up_to_date_summary)
                     }
-                }
+                )
             }
         }
     }
 
-    companion object {
-        private val TAG = this::class.simpleName
+    @Composable
+    fun HomeScreen(modifier: Modifier = Modifier) {
+        val mainVm: HomeContentViewModel = viewModel()
+        val mainUiState by mainVm.uiState.collectAsStateWithLifecycle()
+        val currLocalContext = LocalContext.current
+
+        val snackbarHostState = remember {
+            SnackbarHostState()
+        }
+        val scope = rememberCoroutineScope()
+
+        val docsUrl = stringResource(R.string.docs_url)
+        val authorUrl = stringResource(R.string.author_url)
+        val releasePageUrl = stringResource(R.string.latest_release_page_url)
+        val repositoryUrl = stringResource(R.string.repository_url)
+        val telegramUrl = stringResource(R.string.telegram_url)
+        val deactivatedHint = stringResource(R.string.pref_about_activation_status_deactivated_summary)
+        val updateNotifyText = stringResource(R.string.notify_update_available)
+
+        LaunchedEffect(Unit) {
+            mainVm.updateNotifyEvent.filter {
+                snackbarHostState.currentSnackbarData == null
+            }.onEach {
+                snackbarHostState.showSnackbar(
+                    message = updateNotifyText,
+                    duration = SnackbarDuration.Short
+                )
+            }.collect()
+        }
+
+        Scaffold(
+            modifier = modifier,
+            snackbarHost = {
+                SnackbarHost(snackbarHostState)
+            }
+        ) { paddingValues ->
+            val uiActions = remember {
+                HomeContentUiActions(
+                    onLauncherIconChange = {
+                        mainVm.setLauncherIconHidden(it)
+                    },
+                    onOpenHelp = {
+                        currLocalContext.openUrl(docsUrl)
+                    },
+                    onOpenAuthor = {
+                        currLocalContext.openUrl(authorUrl)
+                    },
+                    onOpenRepository = {
+                        currLocalContext.openUrl(repositoryUrl)
+                    },
+                    onViewRelease = {
+                        currLocalContext.openUrl(releasePageUrl)
+                    },
+                    onJoinTelegramGroup = {
+                        currLocalContext.openUrl(telegramUrl)
+                    },
+                    onNavigateToSettings = {
+                        // Before the settings screen is migrated to the module side,
+                        // we still need to use startActivity
+                        if (mainUiState.moduleActivationState) {
+                            currLocalContext.packageManager.getLaunchIntentForPackage(
+                                "com.ss.android.ugc.aweme"
+                            )?.run {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                putExtra("douyinenhancer_start_settings", true)
+                                currLocalContext.startActivity(this)
+                            }
+                        } else if (snackbarHostState.currentSnackbarData == null) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = deactivatedHint,
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+            HomeContent(
+                uiState = HomeContentUiState(
+                    launcherIconHidden = mainUiState.launcherIconHidden,
+                    moduleActivationState = mainUiState.moduleActivationState,
+                    updateState = mainUiState.updateState
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                uiActions = uiActions
+            )
+        }
     }
 }
