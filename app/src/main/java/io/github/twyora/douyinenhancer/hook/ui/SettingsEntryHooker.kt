@@ -16,7 +16,6 @@ import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.ui.legacy.SettingsDialog
 import io.github.twyora.douyinenhancer.utils.getFieldOrNull
-import io.github.twyora.douyinenhancer.utils.invokeMethod
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
 import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
 import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
