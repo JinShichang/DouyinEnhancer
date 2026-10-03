@@ -6,8 +6,8 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.ui.VerifyDialog
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.ui.legacy.VerifyDialog
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object VerifyDialogHooker : YukiBaseHooker() {
@@ -27,7 +27,7 @@ object VerifyDialogHooker : YukiBaseHooker() {
             return
         }
 
-        packageInstance.mainActivity.selfClass?.resolveMethod(
+        packageInstance.mainActivity.selfClass?.resolveMethodOrNull(
             packageInstance.mainActivity.onResume()
         )?.hook {
             after {

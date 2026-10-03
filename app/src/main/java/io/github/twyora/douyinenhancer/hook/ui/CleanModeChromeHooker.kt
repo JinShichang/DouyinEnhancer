@@ -25,8 +25,8 @@ object CleanModeChromeHooker : YukiBaseHooker() {
         if (!ConfigManager.ui.cleanMode.value) return
         runCatching {
             val chrome = DouyinPackage.instance.cleanModeChrome
-            val top = checkNotNull(checkNotNull(chrome.topViewClass).resolveMethod(chrome.applyTopVisibility()))
-            val bottom = checkNotNull(checkNotNull(chrome.bottomViewClass).resolveMethod(chrome.applyBottomVisibility()))
+            val top = checkNotNull(chrome.topViewClass).resolveMethod(chrome.applyTopVisibility())
+            val bottom = checkNotNull(chrome.bottomViewClass).resolveMethod(chrome.applyBottomVisibility())
             val ui = checkNotNull(checkNotNull(chrome.uiServiceClass).getStaticField<Any>(chrome.uiServiceInstance()))
             val ids = setOf(
                 checkNotNull(ui.invokeMethod<Int>(chrome.topContainerId())),

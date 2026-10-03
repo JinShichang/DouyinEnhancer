@@ -9,7 +9,7 @@ import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
 import io.github.twyora.douyinenhancer.utils.invokeStaticMethod
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 import java.util.Collections
 import java.util.WeakHashMap
 
@@ -44,7 +44,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     }
 
     private fun installRegisterDanmakuContainerHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
-        packageInstance.danmakuView.containerClass?.resolveMethod(
+        packageInstance.danmakuView.containerClass?.resolveMethodOrNull(
             packageInstance.danmakuView.createContainer()
         )?.hook {
             after {
@@ -62,7 +62,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
         }
 
     private fun installAssignDanmakuViewIdHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.danmakuView.selfClass?.resolveMethod(
+        return packageInstance.danmakuView.selfClass?.resolveMethodOrNull(
             packageInstance.danmakuView.onAttachedToWindow()
         )?.hook {
             after {
@@ -84,7 +84,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     }
 
     private fun installAddDanmakuViewIdToCleanModeWhiteListHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
-        packageInstance.cleanModePresenter.selfClass?.resolveMethod(
+        packageInstance.cleanModePresenter.selfClass?.resolveMethodOrNull(
             packageInstance.cleanModePresenter.enterCleanMode()
         )?.hook {
             before {
@@ -106,7 +106,7 @@ object DanmakuViewHooker : YukiBaseHooker() {
     private fun installPartitionDanmakuAncestorHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
         val presenter = packageInstance.cleanModePresenter
         val presenterClass = presenter.selfClass ?: return null
-        return presenterClass.resolveMethod(presenter.handleView())?.hook {
+        return presenterClass.resolveMethodOrNull(presenter.handleView())?.hook {
             before {
                 val view = args[0] as View
                 val ids = danmakuViews.map { it.id }

@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION")
 
-package io.github.twyora.douyinenhancer.ui
+package io.github.twyora.douyinenhancer.ui.legacy
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -16,7 +16,7 @@ import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.config.gate.ConfigStateMode
 import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
 import io.github.twyora.douyinenhancer.utils.Field
-import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 
 class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
     class PrefsFragment : PreferenceFragment() {
@@ -24,12 +24,12 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
 
-            preferenceManager.setField(
+            preferenceManager.setFieldOrNull(
                 Field("mSharedPreferences"),
                 // TODO: Urgent refactor required. This relies on internal implementation details
                 ((ConfigManager.playbackComponentBlock.kvConfig as FastKVStorage).fastKV) as SharedPreferences
             )
-            preferenceManager.setField(Field("mEditor"), null)
+            preferenceManager.setFieldOrNull(Field("mEditor"), null)
             addPreferencesFromResource(R.xml.pref_playback_component_block)
 
             ConfigManager.playbackComponentBlock.allConfigItems.filter { configItem ->

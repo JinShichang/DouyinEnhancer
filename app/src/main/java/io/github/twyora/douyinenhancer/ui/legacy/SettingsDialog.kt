@@ -1,6 +1,6 @@
 @file:Suppress("DEPRECATION")
 
-package io.github.twyora.douyinenhancer.ui
+package io.github.twyora.douyinenhancer.ui.legacy
 
 import android.app.Activity
 import android.app.Activity.RESULT_CANCELED
@@ -29,8 +29,8 @@ import io.github.twyora.douyinenhancer.constant.SignatureKeys
 import io.github.twyora.douyinenhancer.hook.comment.CommentAudioHooker.hook
 import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.Method
-import io.github.twyora.douyinenhancer.utils.resolveMethod
-import io.github.twyora.douyinenhancer.utils.setField
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
+import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 import io.github.twyora.douyinenhancer.utils.toast
 import io.github.twyora.douyinenhancer.utils.verifySha256RsaSignature
 import java.io.ByteArrayInputStream
@@ -79,12 +79,12 @@ class SettingsDialog(context: Context) :
         override fun onCreate(savedInstanceState: Bundle?) {
             super.onCreate(savedInstanceState)
 
-            preferenceManager.setField(
+            preferenceManager.setFieldOrNull(
                 Field("mSharedPreferences"),
                 // TODO: Urgent refactor required. This relies on internal implementation details
                 ((ConfigManager.settingsStorage as FastKVStorage).fastKV) as SharedPreferences
             )
-            preferenceManager.setField(Field("mEditor"), null)
+            preferenceManager.setFieldOrNull(Field("mEditor"), null)
             addPreferencesFromResource(R.xml.prefs_setting)
 
             if (!ConfigManager.misc.hiddenFeatureEnabled.value) {
@@ -101,6 +101,7 @@ class SettingsDialog(context: Context) :
 
             findPreference("recommend_feed_filter")?.onPreferenceClickListener = this
             findPreference("playback_component_block")?.onPreferenceClickListener = this
+            findPreference("bottom_tab_block")?.onPreferenceClickListener = this
             findPreference("export_config")?.onPreferenceClickListener = this
             findPreference("import_config")?.onPreferenceClickListener = this
             (findPreference("disable_verbose_logs") as? SwitchPreference)?.apply {
@@ -133,6 +134,11 @@ class SettingsDialog(context: Context) :
 
             "playback_component_block" -> {
                 PlaybackComponentBlockDialog(context).show()
+                true
+            }
+
+            "bottom_tab_block" -> {
+                BottomTabBlockDialog.show(context)
                 true
             }
 
@@ -487,7 +493,7 @@ class SettingsDialog(context: Context) :
             if (verbose) {
                 YLog.debug("$TAG: night mode on, recoloring settings text white")
             }
-            Preference::class.java.resolveMethod(
+            Preference::class.java.resolveMethodOrNull(
                 Method(name = "onBindView", parameters = null)
             )?.hook {
                 after {

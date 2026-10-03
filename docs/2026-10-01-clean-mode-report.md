@@ -82,6 +82,18 @@ r4 验证：格式检查、8 项播放状态测试（0 失败/0 错误）、Debu
 
 安装后强制停止并重新打开抖音。重点测试播放中连续开关评论（返回键和下滑），关闭后上下栏继续隐藏、弹幕仍显示；再测试暂停时开关评论、继续播放、离开主页及切后台，确认正常操作与恢复。源码继续保留 GitHub 当前工作流，使用 `[skip ci]`，不发布 GitHub Release。
 
+## 2026-10-04：合并上游 v0.14.0，r5 测试版
+
+本次合并 `twyora/DouyinEnhancer` main 的 `c223b823e1c68a7843eeb1f8d840d2226fa10cb2`，包含可配置底栏导航项移除、Compose 模块首页、反射 API 的严格/OrNull 拆分，以及文档与构建依赖更新。保留本分支弹幕容器白名单、共享祖先分解、播放状态、系统全屏和主页栏保护。原作者的底栏导航项移除与清爽模式是独立配置。
+
+上游 HookInfo 新字段 `tab_node = 64`、`mpf_bottom_tab_component = 65` 与本地旧映射编号冲突。保留上游编号，将 `native_clean_mode` 和 `clean_mode_chrome` 改为 66、67；版本为 `0.14.0-cleanmode-r5`、versionCode 1401。现有缓存读取会检查模块 versionCode/versionName，升级后重新生成，避免把旧清爽映射解释为导航项映射。自定义映射预设也必须使用新模块版本与新字段定义。
+
+保留原有可选宿主入口的容错行为：清爽模式 Hook 安装、页面/播放条件查询和布局适配迁移到 `resolveMethodOrNull` / `invokeMethodOrNull`；必需的原生命令、字段和栏位映射使用上游严格 API，由对应失败日志或 runCatching 处理。弹幕 Hook 保留本地实现并迁移可选入口解析，不恢复旧的共享祖先显隐拦截。
+
+GitHub 工作流文件保持合并前内容，不推送标签或发布 GitHub Release。设备回归仍需检查连续开关评论、暂停/继续、直播预览、弹幕，以及新增导航项移除开关与清爽模式组合。
+
+r5 验证：格式检查、8 项播放状态测试（0 失败/0 错误）、Debug/Release 构建和 Release lintVital 均通过。生成的 HookerRegistry 同时包含 BottomTabHooker、三个清爽模式 Hook 和 DanmakuViewHooker；生成的 protobuf 代码确认编号 64/65/66/67 分别对应上游导航项和本地清爽映射。Release APK 的 versionCode 为 1401，v2 签名通过，证书与 r4 相同；外层 `artifacts/DouyinEnhancer_0.14.0-cleanmode-r5.apk` 的 SHA-256 为 `cda80731775a6dc2797abac4d4672f0871f022cdc25970170c5ef9c9d4483257`。`git diff --check` 通过；构建进程报告成功后延迟退出，最终退出码为 0，本地构建脚本已恢复 daemon JVM criteria。构建日志包含上游生成代码、废弃 API 以及 Compose native library 无法去除调试符号的警告，不影响本次构建成功。
+
 ## 首轮构建与测试
 
 使用项目的 Java 21、Gradle 9.4.1 和现有依赖。普通环境可通过 Gradle Wrapper 构建：

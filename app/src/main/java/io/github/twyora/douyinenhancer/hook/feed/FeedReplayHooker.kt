@@ -5,9 +5,9 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.getField
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
 import io.github.twyora.douyinenhancer.utils.invokeMethodOnly
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object FeedReplayHooker : YukiBaseHooker() {
@@ -30,7 +30,7 @@ object FeedReplayHooker : YukiBaseHooker() {
         // BaseListFragmentPanel has no member function onPlayCompleted,
         // but onVideoPlayerEvent will be called when video playback completes with a specific video event code.
         // I have no other good idea; pause the video manually here
-        packageInstance.baseListFragmentPanel.selfClass?.resolveMethod(
+        packageInstance.baseListFragmentPanel.selfClass?.resolveMethodOrNull(
             packageInstance.baseListFragmentPanel.onVideoPlayerEvent()
         )?.hook {
             after {
@@ -38,7 +38,7 @@ object FeedReplayHooker : YukiBaseHooker() {
                     YLog.error("$TAG: video player event is null")
                     return@after
                 }
-                val code = status.getField<Int>(
+                val code = status.getFieldOrNull<Int>(
                     packageInstance.videoPlayerStatus.code()
                 ) ?: run {
                     YLog.error("$TAG: video player event code is null")

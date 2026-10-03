@@ -5,8 +5,8 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.invokeMethod
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.invokeMethodOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object FeedVideoHooker : YukiBaseHooker() {
@@ -26,15 +26,15 @@ object FeedVideoHooker : YukiBaseHooker() {
             return
         }
 
-        packageInstance.miscDownloadAddrUtil.selfClass?.resolveMethod(
+        packageInstance.miscDownloadAddrUtil.selfClass?.resolveMethodOrNull(
             packageInstance.miscDownloadAddrUtil.getSuffixSceneDownloadAddr()
         )?.hook {
             before {
                 val aweme = args[0] ?: return@before
 
-                val playAddr = aweme.invokeMethod<Any>(
+                val playAddr = aweme.invokeMethodOrNull<Any>(
                     packageInstance.aweme.getVideo()
-                )?.invokeMethod<Any>(
+                )?.invokeMethodOrNull<Any>(
                     packageInstance.video.getPlayAddr()
                 )
                 if (playAddr != null) {

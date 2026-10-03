@@ -75,85 +75,115 @@ fun Array<String>.toClassesOrNull(loader: ClassLoader? = null, initialize: Boole
     this.toClasses(loader, initialize)
 }.getOrNull()
 
-fun <T : Any> Class<T>.resolveMethod(method: Method): MethodResolver<T>? {
+fun <T : Any> Class<T>.resolveMethod(method: Method): MethodResolver<T> {
     if (method.name.isNullOrBlank()) {
-        YLog.error("cannot determine which method to resolve on ${this.name}, name is null or blank")
-        return null
+        throw IllegalArgumentException("cannot determine which method to resolve on ${this.name}, name is null or blank")
     }
-    return runCatching {
-        this.resolve().firstMethodOrNull {
-            name = method.name
-            method.parameters?.let {
-                if (it.isEmpty()) {
-                    emptyParameters()
-                } else {
-                    parameters(*it.toClasses(this@resolveMethod.classLoader))
-                }
+    return this.resolve().firstMethod {
+        name = method.name
+        method.parameters?.let {
+            if (it.isEmpty()) {
+                emptyParameters()
+            } else {
+                parameters(*it.toClasses(this@resolveMethod.classLoader))
             }
-            superclass()
         }
-    }.onFailure { throwable ->
-        YLog.error("resolve failed: ${this.name}.${method.name}(${method.parameters})", throwable)
-    }.getOrNull().also {
-        if (it == null) {
-            YLog.error("method not found: ${this.name}.${method.name}(${method.parameters})")
-        }
+        superclass()
     }
 }
 
-fun <T : Any> Class<T>.resolveField(field: Field): FieldResolver<T>? {
+fun <T : Any> Class<T>.resolveMethodOrNull(method: Method): MethodResolver<T>? = runCatching {
+    this.resolveMethod(method)
+}.onFailure {
+    YLog.error("resolve failed: ${this.name}.${method.name}(${method.parameters})", it)
+}.getOrNull()
+
+fun <T : Any> Class<T>.resolveField(field: Field): FieldResolver<T> {
     if (field.name.isNullOrBlank()) {
-        YLog.error("cannot determine which field to resolve on ${this.name}, name is null or blank")
-        return null
+        throw IllegalArgumentException("cannot determine which field to resolve on ${this.name}, name is null or blank")
     }
-    return runCatching {
-        this.resolve().firstFieldOrNull {
-            name = field.name
-            superclass()
-        }
-    }.onFailure { throwable ->
-        YLog.error("resolve failed: ${this.name}.${field.name}", throwable)
-    }.getOrNull().also {
-        if (it == null) {
-            YLog.error("field not found: ${this.name}.${field.name}")
-        }
+    return this.resolve().firstField {
+        name = field.name
+        superclass()
     }
 }
 
-fun <T : Any> KClass<T>.resolveMethod(method: Method): MethodResolver<T>? = this.java.resolveMethod(method)
+fun <T : Any> Class<T>.resolveFieldOrNull(field: Field): FieldResolver<T>? = runCatching {
+    this.resolveField(field)
+}.onFailure {
+    YLog.error("resolve failed: ${this.name}.${field.name}", it)
+}.getOrNull()
 
-fun <T : Any> KClass<T>.resolveField(field: Field): FieldResolver<T>? = this.java.resolveField(field)
+fun <T : Any> KClass<T>.resolveMethod(method: Method): MethodResolver<T> = this.java.resolveMethod(method)
 
-fun <T : Any> T.resolveMethod(method: Method): MethodResolver<T>? {
+fun <T : Any> KClass<T>.resolveMethodOrNull(method: Method): MethodResolver<T>? = this.java.resolveMethodOrNull(method)
+
+fun <T : Any> KClass<T>.resolveField(field: Field): FieldResolver<T> = this.java.resolveField(field)
+
+fun <T : Any> KClass<T>.resolveFieldOrNull(field: Field): FieldResolver<T>? = this.java.resolveFieldOrNull(field)
+
+fun <T : Any> T.resolveMethod(method: Method): MethodResolver<T> {
     @Suppress("UNCHECKED_CAST")
     val thisClass = this::class.java as Class<T>
-    return thisClass.resolveMethod(method)?.of(this)
+    return thisClass.resolveMethod(method).of(this)
 }
 
-fun <T : Any> T.resolveField(field: Field): FieldResolver<T>? {
+fun <T : Any> T.resolveMethodOrNull(method: Method): MethodResolver<T>? {
     @Suppress("UNCHECKED_CAST")
     val thisClass = this::class.java as Class<T>
-    return thisClass.resolveField(field)?.of(this)
+    return thisClass.resolveMethodOrNull(method)?.of(this)
 }
 
-inline fun <reified T> Class<*>.invokeStaticMethod(method: Method, vararg args: Any?): T? = this.resolveMethod(method)?.invoke(*args) as? T
+fun <T : Any> T.resolveField(field: Field): FieldResolver<T> {
+    @Suppress("UNCHECKED_CAST")
+    val thisClass = this::class.java as Class<T>
+    return thisClass.resolveField(field).of(this)
+}
+
+fun <T : Any> T.resolveFieldOrNull(field: Field): FieldResolver<T>? {
+    @Suppress("UNCHECKED_CAST")
+    val thisClass = this::class.java as Class<T>
+    return thisClass.resolveFieldOrNull(field)?.of(this)
+}
+
+inline fun <reified T> Class<*>.invokeStaticMethod(method: Method, vararg args: Any?): T? = this.resolveMethod(method).invoke(*args) as T?
+
+inline fun <reified T> Class<*>.invokeStaticMethodOrNull(method: Method, vararg args: Any?): T? =
+    this.resolveMethodOrNull(method)?.invoke(*args) as? T
 
 inline fun <reified T> KClass<*>.invokeStaticMethod(method: Method, vararg args: Any?): T? = this.java.invokeStaticMethod(method, *args)
 
-inline fun <reified T> Any.invokeMethod(method: Method, vararg args: Any?): T? = this.resolveMethod(method)?.invoke(*args) as? T
+inline fun <reified T> KClass<*>.invokeStaticMethodOrNull(method: Method, vararg args: Any?): T? =
+    this.java.invokeStaticMethodOrNull(method, *args)
+
+inline fun <reified T> Any.invokeMethod(method: Method, vararg args: Any?): T? = this.resolveMethod(method).invoke(*args) as T?
+
+inline fun <reified T> Any.invokeMethodOrNull(method: Method, vararg args: Any?): T? = this.resolveMethodOrNull(method)?.invoke(*args) as? T
 
 fun Any.invokeMethodOnly(method: Method, vararg args: Any?) {
-    this.invokeMethod<Any>(method, *args)
+    this.invokeMethodOrNull<Any>(method, *args)
 }
 
-inline fun <reified T> Class<*>.getStaticField(field: Field): T? = this.resolveField(field)?.get() as? T
+inline fun <reified T> Class<*>.getStaticField(field: Field): T? = this.resolveField(field).get() as T?
+
+inline fun <reified T> Class<*>.getStaticFieldOrNull(field: Field): T? = this.resolveFieldOrNull(field)?.get() as? T
 
 inline fun <reified T> KClass<*>.getStaticField(field: Field): T? = this.java.getStaticField(field)
 
-inline fun <reified T> Any.getField(field: Field): T? = this.resolveField(field)?.get() as? T
+inline fun <reified T> KClass<*>.getStaticFieldOrNull(field: Field): T? = this.java.getStaticFieldOrNull(field)
 
-fun Class<*>.setStaticField(field: Field, value: Any?) = this.resolveField(field)?.set(value)
+inline fun <reified T> Any.getField(field: Field): T? = this.resolveField(field).get() as T?
+
+inline fun <reified T> Any.getFieldOrNull(field: Field): T? = this.resolveFieldOrNull(field)?.get() as? T
+
+fun Class<*>.setStaticField(field: Field, value: Any?) = this.resolveField(field).set(value)
+
+fun Class<*>.setStaticFieldOrNull(field: Field, value: Any?) = this.resolveFieldOrNull(field)?.set(value)
 
 fun KClass<*>.setStaticField(field: Field, value: Any?) = this.java.setStaticField(field, value)
 
-fun Any.setField(field: Field, value: Any?) = this.resolveField(field)?.set(value)
+fun KClass<*>.setStaticFieldOrNull(field: Field, value: Any?) = this.java.setStaticFieldOrNull(field, value)
+
+fun Any.setField(field: Field, value: Any?) = this.resolveField(field).set(value)
+
+fun Any.setFieldOrNull(field: Field, value: Any?) = this.resolveFieldOrNull(field)?.set(value)

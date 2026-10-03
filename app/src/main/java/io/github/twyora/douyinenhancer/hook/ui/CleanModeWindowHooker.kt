@@ -12,7 +12,7 @@ import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
 import io.github.twyora.douyinenhancer.hook.NativeCleanModeSymbols
 import io.github.twyora.douyinenhancer.utils.Method
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object CleanModeWindowHooker : YukiBaseHooker() {
@@ -21,7 +21,7 @@ object CleanModeWindowHooker : YukiBaseHooker() {
     override fun onHook() {
         if (!ConfigManager.ui.cleanMode.value) return
         listOf(Method("onPostResume", emptyList()), Method("onWindowFocusChanged", listOf("boolean"))).forEach { method ->
-            Activity::class.java.resolveMethod(method)?.hook {
+            Activity::class.java.resolveMethodOrNull(method)?.hook {
                 after {
                     val activity = instance as Activity
                     if (activity.javaClass.name == NativeCleanModeSymbols.MAIN_ACTIVITY && (args.isEmpty() || args[0] == true)) {
@@ -33,7 +33,7 @@ object CleanModeWindowHooker : YukiBaseHooker() {
                 onHookingFailure { error -> YLog.error("$TAG: activity window hook failed", error) }
             }
         }
-        Window::class.java.resolveMethod(Method("setFlags", listOf("int", "int")))?.hook {
+        Window::class.java.resolveMethodOrNull(Method("setFlags", listOf("int", "int")))?.hook {
             before {
                 val window = instance as Window
                 if (window.context.javaClass.name == NativeCleanModeSymbols.MAIN_ACTIVITY) {

@@ -84,6 +84,10 @@
             android:title="@string/playback_component_block_dialog_title"
             android:summary="@string/playback_component_block_dialog_summary" />
 
+        <Preference
+            android:key="bottom_tab_block"
+            android:title="@string/bottom_tab_block_dialog_title" />
+
         <SwitchPreference
             android:defaultValue="false"
             android:key="keep_danmaku_visible"
@@ -197,8 +201,7 @@
         <Preference
             android:key="back_then"
             android:title="@string/pref_about_back_then_title"
-            android:summary="@string/pref_about_back_then_summary"></Preference>
-
+            android:summary="@string/pref_about_back_then_summary" />
     </PreferenceCategory>
 
 </PreferenceScreen>

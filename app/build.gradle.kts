@@ -9,6 +9,8 @@ plugins {
     // 作为 Xposed 模块使用务必添加，其它情况可选
     alias(libs.plugins.ksp)
     alias(libs.plugins.protobuf)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -73,6 +75,7 @@ android {
     buildFeatures {
         buildConfig = true
         viewBinding = true
+        compose = true
     }
 
     buildTypes {
@@ -113,7 +116,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
 
-    aaptOptions {
+    androidResources {
         additionalParameters += listOf("--package-id", "0x7E", "--allow-reserved-package-id")
     }
 }
@@ -157,6 +160,8 @@ buildscript {
 }
 
 dependencies {
+    // TODO: Reorganize this
+
     implementation(project(":annotation"))
     ksp(project(":processor"))
 
@@ -187,6 +192,21 @@ dependencies {
     compileOnly(libs.xposed.api)
     // 作为 Xposed 模块使用务必添加，其它情况可选
     ksp(libs.yukihookapi.ksp.xposed)
+
+    // compose
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // navigation3
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 }
 
 fun resolveGitCommitSuffix(project: Project) = runCatching {

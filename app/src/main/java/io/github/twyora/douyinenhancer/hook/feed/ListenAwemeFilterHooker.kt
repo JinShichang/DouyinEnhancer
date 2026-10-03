@@ -6,8 +6,8 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.utils.getField
-import io.github.twyora.douyinenhancer.utils.resolveMethod
+import io.github.twyora.douyinenhancer.utils.getFieldOrNull
+import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
 object ListenAwemeFilterHooker : YukiBaseHooker() {
@@ -30,7 +30,7 @@ object ListenAwemeFilterHooker : YukiBaseHooker() {
     }
 
     private fun installBypassListenAwemeFilterHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
-        packageInstance.listenAwemeFilter.selfClass?.resolveMethod(
+        packageInstance.listenAwemeFilter.selfClass?.resolveMethodOrNull(
             packageInstance.listenAwemeFilter.accept()
         )?.hook {
             after {
@@ -40,7 +40,7 @@ object ListenAwemeFilterHooker : YukiBaseHooker() {
 
                 if (verbose) {
                     val aweme = args[0]
-                    val awemeId = aweme?.getField<String>(
+                    val awemeId = aweme?.getFieldOrNull<String>(
                         packageInstance.aweme.aid()
                     )
                     YLog.debug("$TAG: bypassing listen aweme filter for aweme id: $awemeId")

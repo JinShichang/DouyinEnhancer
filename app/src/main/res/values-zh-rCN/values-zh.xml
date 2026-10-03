@@ -129,6 +129,15 @@
     <string name="playback_component_block_ai_co_creators_three">✦ AI合拍作者头像</string>
     <string name="playback_component_block_aigc_cocreate_status_title">✦ AI共创标签</string>
 
+    <string name="bottom_tab_block_dialog_title">隐藏底部导航项</string>
+    <string name="bottom_tab_main_switch_title">总开关</string>
+    <string name="bottom_tab_main_switch_summary">开启后可以使用隐藏底部导航项功能</string>
+    <string name="bottom_tab_hide_homepage_home">首页</string>
+    <string name="bottom_tab_hide_homepage_mall">商城</string>
+    <string name="bottom_tab_hide_homepage_publish">发布按钮</string>
+    <string name="bottom_tab_hide_homepage_notification">消息</string>
+    <string name="bottom_tab_hide_homepage_profile">我</string>
+
     <string name="pref_category_backup">备份和还原</string>
     <string name="pref_backup_export_title">导出配置</string>
     <string name="pref_backup_import_title">导入配置</string>
@@ -180,7 +189,7 @@
     <string name="pref_about_telegram_summary">点击加入 TG 频道</string>
     <string name="pref_about_build_time_title">构建时间</string>
     <string name="pref_about_back_then_title">作者当时🎵</string>
-    <string name="pref_about_back_then_summary">西风牵老马 载我过人家\n两袖结云霞 风尘来下榻\n我心怀不大 烦恼装不下\n无愁亦无忧啊 自称逍遥侠🎵</string>
+    <string name="pref_about_back_then_summary">五星红旗迎风飘扬 胜利歌声多么响亮\n歌唱我们亲爱的祖国 从今走向繁荣富强🎵</string>
 
     <string name="success">成功</string>
     <string name="failed">失败</string>
@@ -200,7 +209,7 @@
     <string name="pref_settings_open_module_settings_summary">启动客户端并打开模块设置</string>
     <string name="pref_settings_hide_launcher_icon_title">隐藏桌面图标</string>
     <string name="pref_settings_hide_launcher_icon_summary">不显示本应用在启动器中的图标</string>
-    <string name="pref_about_activation_status_disabled_title">未启用</string>
+    <string name="pref_about_activation_status_deactivated_title">未启用</string>
     <string name="pref_about_activation_status_deactivated_summary">抖柚未激活</string>
     <string name="pref_about_activation_status_activated_title">已启用</string>
     <string name="pref_about_activation_status_activated_summary">抖柚已激活</string>
