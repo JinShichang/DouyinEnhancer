@@ -131,7 +131,7 @@ class MainActivity : ComponentActivity() {
                                 putExtra("douyinenhancer_start_settings", true)
                                 currLocalContext.startActivity(this)
                             }
-                        } else if (snackbarHostState.currentSnackbarData != null) {
+                        } else if (snackbarHostState.currentSnackbarData == null) {
                             scope.launch {
                                 snackbarHostState.showSnackbar(
                                     message = deactivatedHint,
