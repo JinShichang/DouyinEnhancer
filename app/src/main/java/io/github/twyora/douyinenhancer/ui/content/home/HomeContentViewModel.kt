@@ -9,8 +9,6 @@ import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
-import io.github.twyora.douyinenhancer.config.ConfigManager
-import io.github.twyora.douyinenhancer.config.provider.ModuleConfigProvider
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -58,14 +56,7 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
                     it.copy(updateState = updateInfo)
                 }
 
-                ConfigManager.module.notifyUpdateCooldown.run {
-                    val period = ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD
-                    value = (value - 1 + period) % period
-
-                    if (value == 0) {
-                        updateNotifyEventInternal.tryEmit(Unit)
-                    }
-                }
+                updateNotifyEventInternal.tryEmit(Unit)
             }
         }
     }
