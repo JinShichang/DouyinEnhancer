@@ -9,9 +9,13 @@ import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
+import io.github.twyora.douyinenhancer.config.ConfigManager
+import io.github.twyora.douyinenhancer.config.provider.ModuleConfigProvider
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -36,6 +40,9 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
     )
     val uiState: StateFlow<UiState> get() = uiStateInternal
 
+    private val updateNotifyEventInternal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val updateNotifyEvent: SharedFlow<Unit> get() = updateNotifyEventInternal
+
     init {
         viewModelScope.launch {
             uiStateInternal.update {
@@ -47,7 +54,18 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
                 )
             }
             fetchUpdateInfo()?.let { updateInfo ->
-                uiStateInternal.update { it.copy(updateState = updateInfo) }
+                uiStateInternal.update {
+                    it.copy(updateState = updateInfo)
+                }
+
+                ConfigManager.module.notifyUpdateCooldown.run {
+                    val period = ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD
+                    value = (value - 1 + period) % period
+
+                    if (value == 0) {
+                        updateNotifyEventInternal.tryEmit(Unit)
+                    }
+                }
             }
         }
     }

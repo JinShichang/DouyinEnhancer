@@ -19,6 +19,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,6 +38,9 @@ import io.github.twyora.douyinenhancer.ui.content.home.UiActions as HomeContentU
 import io.github.twyora.douyinenhancer.ui.content.home.UiState as HomeContentUiState
 import io.github.twyora.douyinenhancer.ui.navigation.AppRoutes
 import io.github.twyora.douyinenhancer.utils.openUrl
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -93,6 +97,18 @@ class MainActivity : ComponentActivity() {
         val repositoryUrl = stringResource(R.string.repository_url)
         val telegramUrl = stringResource(R.string.telegram_url)
         val deactivatedHint = stringResource(R.string.pref_about_activation_status_deactivated_summary)
+        val updateNotifyText = stringResource(R.string.notify_update_available)
+
+        LaunchedEffect(Unit) {
+            mainVm.updateNotifyEvent.filter {
+                snackbarHostState.currentSnackbarData == null
+            }.onEach {
+                snackbarHostState.showSnackbar(
+                    message = updateNotifyText,
+                    duration = SnackbarDuration.Short
+                )
+            }.collect()
+        }
 
         Scaffold(
             modifier = modifier,
