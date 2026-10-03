@@ -49,11 +49,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val currLocalContext = LocalContext.current
+            val dark = isSystemInDarkTheme()
             MaterialTheme(
-                colorScheme = run {
-                    val currLocalContext = LocalContext.current
+                colorScheme = remember(dark) {
                     val dynamic = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                    val dark = isSystemInDarkTheme()
                     when {
                         dynamic && dark -> dynamicDarkColorScheme(currLocalContext)
                         dynamic -> dynamicLightColorScheme(currLocalContext)
