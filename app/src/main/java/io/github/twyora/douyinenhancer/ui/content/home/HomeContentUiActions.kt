@@ -1,6 +1,6 @@
 package io.github.twyora.douyinenhancer.ui.content.home
 
-data class UiActions(
+data class HomeContentUiActions(
     val onLauncherIconChange: (Boolean) -> Unit = {},
     val onOpenHelp: () -> Unit = {},
     val onOpenAuthor: () -> Unit = {},

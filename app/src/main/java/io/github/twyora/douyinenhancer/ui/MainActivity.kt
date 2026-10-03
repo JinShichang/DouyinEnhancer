@@ -33,9 +33,9 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import io.github.twyora.douyinenhancer.R
 import io.github.twyora.douyinenhancer.ui.content.home.HomeContent
+import io.github.twyora.douyinenhancer.ui.content.home.HomeContentUiActions
+import io.github.twyora.douyinenhancer.ui.content.home.HomeContentUiState
 import io.github.twyora.douyinenhancer.ui.content.home.HomeContentViewModel
-import io.github.twyora.douyinenhancer.ui.content.home.UiActions as HomeContentUiActions
-import io.github.twyora.douyinenhancer.ui.content.home.UiState as HomeContentUiState
 import io.github.twyora.douyinenhancer.ui.navigation.AppRoutes
 import io.github.twyora.douyinenhancer.utils.openUrl
 import kotlinx.coroutines.flow.collect

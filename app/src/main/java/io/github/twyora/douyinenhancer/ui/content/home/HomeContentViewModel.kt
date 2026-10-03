@@ -29,16 +29,16 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
     )
 
     private val uiStateInternal = MutableStateFlow(
-        UiState(
+        HomeContentUiState(
             launcherIconHidden = false,
             moduleActivationState = false,
-            updateState = UpdateState(
+            updateState = HomeContentUpdateState(
                 latestVersionName = BuildConfig.VERSION_NAME,
                 releaseBody = null
             )
         )
     )
-    val uiState: StateFlow<UiState> get() = uiStateInternal
+    val uiState: StateFlow<HomeContentUiState> get() = uiStateInternal
 
     private val updateNotifyEventInternal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val updateNotifyEvent: SharedFlow<Unit> get() = updateNotifyEventInternal
@@ -88,7 +88,7 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    private suspend fun fetchUpdateInfo(): UpdateState? = runCatching {
+    private suspend fun fetchUpdateInfo(): HomeContentUpdateState? = runCatching {
         val latestReleaseJson = withContext(Dispatchers.IO) {
             JSONObject(
                 URL(
@@ -103,7 +103,7 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
         val releaseBody = latestReleaseJson.optString("body")
 
         if (latestVersionName.isNotBlank() && BuildConfig.VERSION_NAME != latestVersionName) {
-            UpdateState(
+            HomeContentUpdateState(
                 latestVersionName = latestVersionName,
                 releaseBody = releaseBody
             )
