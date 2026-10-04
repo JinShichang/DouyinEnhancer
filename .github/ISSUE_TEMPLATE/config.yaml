@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 🐛 Bug Report (English)
+    url: https://github.com/twyora/DouyinEnhancer/issues/new?template=bug_report_en.yaml
+    about: Submit a bug report
+  - name: 🐛 Bug Report（中文）
+    url: https://github.com/twyora/DouyinEnhancer/issues/new?template=bug_report_zh.yaml
+    about: 提交 Bug 反馈
