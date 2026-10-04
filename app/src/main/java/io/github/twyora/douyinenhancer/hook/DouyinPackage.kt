@@ -129,6 +129,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     val storyServiceImpl = StoryServiceImplModule(hookInfo.storyServiceImpl, classLoader)
     val tabNode = TabNodeModule(hookInfo.tabNode, classLoader)
     val mpfBottomTabComponent = MPFBottomTabComponentModule(hookInfo.mpfBottomTabComponent, classLoader)
+    val homeTabDataSourceServer = HomeTabDataSourceServerModule(hookInfo.homeTabDataSourceServer, classLoader)
+    val homeTabDataSourceDefault = HomeTabDataSourceDefaultModule(hookInfo.homeTabDataSourceDefault, classLoader)
 
     class CommentImageStructModule internal constructor(
         private val configs: Configs.CommentImageStruct,
@@ -1032,6 +1034,15 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
             const val TAB_ID_HOMEPAGE_PUBLISH = "homepage_publish"
             const val TAB_ID_HOMEPAGE_NOTIFICATION = "homepage_notification"
             const val TAB_ID_HOMEPAGE_PROFILE = "homepage_profile"
+            const val TAB_ID_HOMEPAGE_MEDIUMVIDEO = "homepage_mediumvideo"
+            const val TAB_ID_HOMEPAGE_NEARBY = "homepage_nearby"
+            const val TAB_ID_HOMEPAGE_HANGOUT = "homepage_hangout"
+            const val TAB_ID_HOMEPAGE_PAD_HOT = "homepage_pad_hot"
+            const val TAB_ID_HOMEPAGE_TABLIVE = "homepage_tablive"
+            const val TAB_ID_HOMEPAGE_GROUPON = "homepage_groupon"
+            const val TAB_ID_HOMEPAGE_FAMILIAR = "homepage_familiar"
+            const val TAB_ID_HOMEPAGE_FOLLOW = "homepage_follow"
+            const val TAB_ID_HOMEPAGE_HOT_CONTAINER = "homepage_hot_container"
         }
     }
 
@@ -1048,6 +1059,44 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun buildTabViews() = Method(
             configs.buildTabViews.nameOrNull,
             configs.buildTabViews.parameters.valuesListOrNull
+        )
+    }
+
+    class HomeTabDataSourceServerModule internal constructor(
+        private val configs: Configs.HomeTabDataSourceServer,
+        private val classLoader: ClassLoader
+    ) {
+        val selfClass by weak {
+            configs.class_.nameOrNull?.toClass(classLoader)
+        }
+
+        fun getShowingBottomTabIds() = Method(
+            configs.getShowingBottomTabIds.nameOrNull,
+            configs.getShowingBottomTabIds.parameters.valuesListOrNull
+        )
+
+        fun getShowingTopTabIds() = Method(
+            configs.getShowingTopTabIds.nameOrNull,
+            configs.getShowingTopTabIds.parameters.valuesListOrNull
+        )
+    }
+
+    class HomeTabDataSourceDefaultModule internal constructor(
+        private val configs: Configs.HomeTabDataSourceDefault,
+        private val classLoader: ClassLoader
+    ) {
+        val selfClass by weak {
+            configs.class_.nameOrNull?.toClass(classLoader)
+        }
+
+        fun getShowingBottomTabIds() = Method(
+            configs.getShowingBottomTabIds.nameOrNull,
+            configs.getShowingBottomTabIds.parameters.valuesListOrNull
+        )
+
+        fun getShowingTopTabIds() = Method(
+            configs.getShowingTopTabIds.nameOrNull,
+            configs.getShowingTopTabIds.parameters.valuesListOrNull
         )
     }
 
@@ -3893,6 +3942,168 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                             parameters = MethodKt.parameters {
                                 values.clear()
                                 values.addAll(buildTabViewsMethodData.paramTypeNames)
+                            }
+                        }
+                    }.onFailure {
+                        YLog.error(populateFailedMsg.format(TAG), it)
+                    }
+                }
+
+                homeTabDataSourceServer = homeTabDataSourceServer {
+                    runCatching {
+                        val homeTabDataSourceServerClassData = bridge.findClass {
+                            matcher {
+                                usingStrings {
+                                    add("HomeTabDataSourceServer", StringMatchType.Equals)
+                                    add("buildShowingTopTabIds", StringMatchType.Equals)
+                                }
+                            }
+                        }.singleOrNull()
+                        val getShowingBottomTabIdsMethodData = homeTabDataSourceServerClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
+                                    returnType = "java.util.List"
+                                    usingStrings {
+                                        add("buildShowingTopTabIds")
+                                    }
+                                    invokeMethods {
+                                        add {
+                                            modifiers = Modifier.PUBLIC
+                                            returnType = "boolean"
+                                            usingFields {
+                                                add {
+                                                    annotations {
+                                                        add {
+                                                            type = "com.google.gson.annotations.SerializedName"
+                                                            addElement {
+                                                                name = "value"
+                                                                stringValue("is_show")
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            declaredClass {
+                                                annotations {
+                                                    add {
+                                                        type = "com.google.gson.annotations.SerializedName"
+                                                        addElement {
+                                                            name = "value"
+                                                            stringValue("movable")
+                                                        }
+                                                    }
+                                                    add {
+                                                        type = "com.google.gson.annotations.SerializedName"
+                                                        addElement {
+                                                            name = "value"
+                                                            stringValue("drag_type")
+                                                        }
+                                                    }
+                                                    add {
+                                                        type = "com.google.gson.annotations.SerializedName"
+                                                        addElement {
+                                                            name = "value"
+                                                            stringValue("extra")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        val getShowingTopTabIdsMethodData = homeTabDataSourceServerClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
+                                    returnType = "java.util.List"
+                                    usingStrings {
+                                        add("buildShowingTopTabIds")
+                                    }
+                                }
+                            }.singleOrNull { methodData ->
+                                methodData.name != getShowingBottomTabIdsMethodData?.name
+                            }
+                        }
+                        if (homeTabDataSourceServerClassData == null || getShowingBottomTabIdsMethodData == null || getShowingTopTabIdsMethodData == null) {
+                            YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
+                            return@homeTabDataSourceServer
+                        }
+                        class_ = class_ {
+                            name = homeTabDataSourceServerClassData.name
+                        }
+                        getShowingBottomTabIds = method {
+                            name = getShowingBottomTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingBottomTabIdsMethodData.paramTypeNames)
+                            }
+                        }
+                        getShowingTopTabIds = method {
+                            name = getShowingTopTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingTopTabIdsMethodData.paramTypeNames)
+                            }
+                        }
+                    }.onFailure {
+                        YLog.error(populateFailedMsg.format(TAG), it)
+                    }
+                }
+
+                homeTabDataSourceDefault = homeTabDataSourceDefault {
+                    runCatching {
+                        val homeTabDataSourceDefaultClassData = bridge.findClass {
+                            matcher {
+                                usingStrings {
+                                    add("HomeTabDataSourceDefault", StringMatchType.Equals)
+                                    add("buildEditedTopTabs", StringMatchType.Equals)
+                                }
+                            }
+                        }.singleOrNull()
+                        val getShowingBottomTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    this@apply.homeTabDataSourceServer.getShowingBottomTabIds.nameOrNull?.let { methodName ->
+                                        name = methodName
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        val getShowingTopTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    this@apply.homeTabDataSourceServer.getShowingTopTabIds.nameOrNull?.let { methodName ->
+                                        name = methodName
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        if (homeTabDataSourceDefaultClassData == null || getShowingBottomTabIdsMethodData == null || getShowingTopTabIdsMethodData == null) {
+                            YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
+                            return@homeTabDataSourceDefault
+                        }
+                        class_ = class_ {
+                            name = homeTabDataSourceDefaultClassData.name
+                        }
+                        getShowingBottomTabIds = method {
+                            name = getShowingBottomTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingBottomTabIdsMethodData.paramTypeNames)
+                            }
+                        }
+                        getShowingTopTabIds = method {
+                            name = getShowingTopTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingTopTabIdsMethodData.paramTypeNames)
                             }
                         }
                     }.onFailure {
