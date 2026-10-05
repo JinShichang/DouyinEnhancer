@@ -16,10 +16,6 @@ object HomeBottomTabHooker : YukiBaseHooker() {
     private val packageInstance
         get() = DouyinPackage.instance
 
-    private val verbose
-        get() = !ConfigManager.module.verboseDisabled.value
-
-
     private val tabIdsToRemove by lazy {
         val config = ConfigManager.bottomTab
         listOf(
@@ -41,11 +37,11 @@ object HomeBottomTabHooker : YukiBaseHooker() {
             return@pruneBottom
         }
 
-        if (verbose) {
-            YLog.debug("$TAG: removing blocklisted ids from bottom tab ids")
-        }
-        bottomTabIds.removeIf {
+        val removed = bottomTabIds.removeIf {
             it in tabIdsToRemove
+        }
+        if (!removed) {
+            YLog.warn("$TAG: no blocklisted bottom tab ids were removed. blocklist: $tabIdsToRemove, bottomTabIds: $bottomTabIds")
         }
     }
 
