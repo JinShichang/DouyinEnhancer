@@ -456,6 +456,17 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun aid() = Field(configs.aid.nameOrNull)
 
         fun status() = Field(configs.status.nameOrNull)
+
+        fun getFollowStatus() = Method(
+            configs.getFollowStatus.nameOrNull,
+            configs.getFollowStatus.parameters.valuesListOrNull
+        )
+
+        companion object {
+            const val FOLLOW_STATUS_UNFOLLOWED = 0
+//            const val FOLLOW_STATUS_FOLLOWING = 1
+//            const val FOLLOW_STATUS_MUTUAL_FOLLOW = 2
+        }
     }
 
     class AwemeStatusModule internal constructor(private val configs: Configs.AwemeStatus, private val classLoader: ClassLoader) {
@@ -2094,6 +2105,9 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                     status = field {
                         name = "status"
+                    }
+                    getFollowStatus = method {
+                        name = "getFollowStatus"
                     }
                 }
 

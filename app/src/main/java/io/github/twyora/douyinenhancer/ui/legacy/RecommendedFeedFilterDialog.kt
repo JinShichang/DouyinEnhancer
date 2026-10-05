@@ -34,6 +34,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
 
         // restore state
         recommendedFeedFilterDialogBinding.switchMainSwitch.isChecked = cfg.mainSwitch.value
+        recommendedFeedFilterDialogBinding.switchBlockFollowedAuthor.isChecked = cfg.blockFollowedAuthor.value
         recommendedFeedFilterDialogBinding.switchBlockAd.isChecked = cfg.blockAd.value
         recommendedFeedFilterDialogBinding.switchBlockEcomAweme.isChecked = cfg.blockEcom.value
         recommendedFeedFilterDialogBinding.switchBlockGrouponLargeCard.isChecked = cfg.blockGrouponLargeCard.value
@@ -120,6 +121,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
             val blockGrouponLargeCard = recommendedFeedFilterDialogBinding.switchBlockGrouponLargeCard.isChecked
             val blockLive = recommendedFeedFilterDialogBinding.switchBlockLive.isChecked
             val blockMultiImage = recommendedFeedFilterDialogBinding.switchBlockMultiImage.isChecked
+            val blockFollowedAuthor = recommendedFeedFilterDialogBinding.switchBlockFollowedAuthor.isChecked
 
             val hideShortDurationLimit = recommendedFeedFilterDialogBinding.editShortDuration.text.toString().toIntOrNull() ?: 0
             val hideLongDurationLimit = recommendedFeedFilterDialogBinding.editLongDuration.text.toString().toIntOrNull() ?: Int.MAX_VALUE
@@ -217,6 +219,7 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
             cfg.blockGrouponLargeCard.value = blockGrouponLargeCard
             cfg.blockLive.value = blockLive
             cfg.blockMultiImage.value = blockMultiImage
+            cfg.blockFollowedAuthor.value = blockFollowedAuthor
             cfg.shortDurationLimit.value = hideShortDurationLimit
             cfg.longDurationLimit.value = hideLongDurationLimit
             cfg.collectCountMin.value = hideCollectCountMin

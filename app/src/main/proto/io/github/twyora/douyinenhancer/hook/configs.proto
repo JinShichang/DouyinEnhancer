@@ -152,6 +152,7 @@ message Aweme {
   optional Method get_download_status = 16;
   optional Field aid = 17;
   optional Field status = 18;
+  optional Method get_follow_status = 19;
 }
 
 message AwemeStatus {
