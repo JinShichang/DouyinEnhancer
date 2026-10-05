@@ -75,90 +75,38 @@ object RecommendedFeedHooker : YukiBaseHooker() {
             before {
                 val awemeList = args[2] as? MutableList<*> ?: return@before
 
-                val iter = awemeList.iterator()
-                while (iter.hasNext()) {
-                    val awemeObj = iter.next() ?: continue
-
-                    if (ConfigManager.recommendedFeedFilter.blockAd.value &&
-                        awemeObj.invokeMethodOrNull<Boolean>(packageInstance.aweme.getAd()) == true
-                    ) {
-                        if (verbose) {
-                            YLog.debug("$TAG: filtered by ad")
-                        }
-                        iter.remove()
-                        continue
-                    } else if (ConfigManager.recommendedFeedFilter.blockEcom.value &&
-                        awemeObj.invokeMethodOrNull<Boolean>(packageInstance.aweme.isEcomAweme()) == true
-                    ) {
-                        // NOTE: this filter logic has not been rigorously verified
-                        if (verbose) {
-                            YLog.debug("$TAG: filtered by ecom aweme")
-                        }
-                        iter.remove()
-                        continue
-                    } else if (ConfigManager.recommendedFeedFilter.blockGrouponLargeCard.value && awemeObj.getFieldOrNull<Any>(
-                            packageInstance.aweme.grouponLargeCard()
-                        ) != null
-                    ) {
-                        // NOTE: this filter logic has not been rigorously verified
-                        if (verbose) {
-                            YLog.debug("$TAG: filtered by groupon large card")
-                        }
-                        iter.remove()
-                        continue
-                    } else if (ConfigManager.recommendedFeedFilter.blockLive.value &&
-                        awemeObj.invokeMethodOrNull<Boolean>(packageInstance.aweme.isLive()) == true
-                    ) {
-                        // NOTE: this filter logic has not been rigorously verified
-                        if (verbose) {
-                            YLog.debug("$TAG: filtered by live")
-                        }
-                        iter.remove()
-                        continue
-                    } else if (ConfigManager.recommendedFeedFilter.blockMultiImage.value &&
-                        awemeObj.invokeMethodOrNull<Boolean>(packageInstance.aweme.isMultiImage()) == true
-                    ) {
-                        // NOTE: this filter logic has not been rigorously verified
-                        if (verbose) {
-                            YLog.debug("$TAG: filtered by multi image")
-                        }
-                        iter.remove()
-                        continue
-                    } else if (run {
-                            if (ConfigManager.recommendedFeedFilter.shortDurationLimit.value
-                                > ConfigManager.recommendedFeedFilter.longDurationLimit.value
-                            ) {
-                                return@run false
-                            }
-
-                            if (awemeObj.invokeMethodOrNull<Boolean>(
-                                    packageInstance.aweme.isNormalVideo()
-                                ) == false
-                            ) {
-                                return@run false
-                            }
-
-                            val duration = awemeObj.getFieldOrNull<Int>(
-                                packageInstance.aweme.duration()
-                            ) ?: return@run false
-
-                            return@run duration != 0 && with(ConfigManager.recommendedFeedFilter) {
-                                duration !in shortDurationLimit.value..longDurationLimit.value
-                            }
-                        }
-                    ) {
-                        if (verbose) {
-                            YLog.debug("$TAG: filtered by duration")
-                        }
-                        iter.remove()
-                        continue
-                    } else if (shouldFilterByInteractionStats(awemeObj)) {
-                        iter.remove()
-                        continue
-                    } else if (shouldFilterByKeyword(awemeObj)) {
-                        iter.remove()
-                        continue
+                val removed = awemeList.removeIf {
+                    with(ConfigManager.recommendedFeedFilter) {
+                        // begin unvalidated filter condition
+                        (blockAd.value &&
+                            it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.getAd()) == true) ||
+                            (blockEcom.value &&
+                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isEcomAweme()) == true) ||
+                            (blockGrouponLargeCard.value &&
+                                it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null) ||
+                            (blockGrouponLargeCard.value &&
+                                it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null) ||
+                            (blockLive.value &&
+                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isLive()) == true) ||
+                            (blockMultiImage.value &&
+                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isMultiImage()) == true) ||
+                            // end unvalidated filter condition
+                            (blockFollowedAuthor.value && it?.invokeMethodOrNull<Int>(
+                                packageInstance.aweme.getFollowStatus()
+                            ) != DouyinPackage.AwemeModule.FOLLOW_STATUS_UNFOLLOWED) ||
+                            (it?.let { aweme ->
+                                shouldFilterByDuration(aweme)
+                            } == true) ||
+                            (it?.let { aweme ->
+                                shouldFilterByInteractionStats(aweme)
+                            } == true) ||
+                            (it?.let { aweme ->
+                                shouldFilterByKeyword(aweme)
+                            } == true)
                     }
+                }
+                if (!removed) {
+                    YLog.warn("$TAG: no recommended feed aweme removed")
                 }
             }
         }?.result {
@@ -169,6 +117,18 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook for filtering recommended feed aweme", throwable)
             }
         }
+    }
+
+    private fun shouldFilterByDuration(aweme: Any): Boolean {
+        val filter = ConfigManager.recommendedFeedFilter
+        if (filter.shortDurationLimit.value > filter.longDurationLimit.value) {
+            return false
+        }
+        if (aweme.invokeMethodOrNull<Boolean>(packageInstance.aweme.isNormalVideo()) == false) {
+            return false
+        }
+        val duration = aweme.getFieldOrNull<Int>(packageInstance.aweme.duration()) ?: return false
+        return duration != 0 && duration !in filter.shortDurationLimit.value..filter.longDurationLimit.value
     }
 
     private fun shouldFilterByInteractionStats(aweme: Any): Boolean {
