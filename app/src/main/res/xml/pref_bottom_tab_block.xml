@@ -40,6 +40,11 @@
 
     <CheckBoxPreference
         android:defaultValue="false"
+        android:key="top_tab_hide_homepage_hot_container"
+        android:title="@string/top_tab_hide_homepage_hot_container" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
         android:key="top_tab_hide_homepage_follow"
         android:title="@string/top_tab_hide_homepage_follow" />
 
@@ -55,18 +60,8 @@
 
     <CheckBoxPreference
         android:defaultValue="false"
-        android:key="top_tab_hide_homepage_hot_container"
-        android:title="@string/top_tab_hide_homepage_hot_container" />
-
-    <CheckBoxPreference
-        android:defaultValue="false"
-        android:key="top_tab_hide_homepage_nearby"
-        android:title="@string/top_tab_hide_homepage_nearby" />
-
-    <CheckBoxPreference
-        android:defaultValue="false"
-        android:key="top_tab_hide_homepage_mediumvideo"
-        android:title="@string/top_tab_hide_homepage_mediumvideo" />
+        android:key="top_tab_hide_homepage_tablive"
+        android:title="@string/top_tab_hide_homepage_tablive" />
 
     <CheckBoxPreference
         android:defaultValue="false"
@@ -75,12 +70,16 @@
 
     <CheckBoxPreference
         android:defaultValue="false"
+        android:key="top_tab_hide_homepage_nearby"
+        android:title="@string/top_tab_hide_homepage_nearby" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
         android:key="top_tab_hide_homepage_hangout"
         android:title="@string/top_tab_hide_homepage_hangout" />
 
     <CheckBoxPreference
         android:defaultValue="false"
-        android:key="top_tab_hide_homepage_tablive"
-        android:title="@string/top_tab_hide_homepage_tablive" />
-
+        android:key="top_tab_hide_homepage_mediumvideo"
+        android:title="@string/top_tab_hide_homepage_mediumvideo" />
 </PreferenceScreen>

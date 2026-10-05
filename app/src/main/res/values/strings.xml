@@ -141,12 +141,12 @@
     <string name="top_tab_main_switch_summary">Enable to configure hiding of top navigation entries</string>
     <string name="top_tab_hide_homepage_follow">Follow</string>
     <string name="top_tab_hide_homepage_familiar">Friends</string>
-    <string name="top_tab_hide_homepage_groupon">Group Buy</string>
-    <string name="top_tab_hide_homepage_hot_container">Hot</string>
+    <string name="top_tab_hide_homepage_groupon">Deals</string>
+    <string name="top_tab_hide_homepage_hot_container">For You</string>
     <string name="top_tab_hide_homepage_nearby">Nearby</string>
-    <string name="top_tab_hide_homepage_mediumvideo">Experience</string>
-    <string name="top_tab_hide_homepage_pad_hot">Featured</string>
-    <string name="top_tab_hide_homepage_hangout">Recommend</string>
+    <string name="top_tab_hide_homepage_mediumvideo">Featured</string>
+    <string name="top_tab_hide_homepage_pad_hot">Trending</string>
+    <string name="top_tab_hide_homepage_hangout">Moments</string>
     <string name="top_tab_hide_homepage_tablive">Live</string>
 
     <string name="home_tab_block_summary">Hide navigation entries on the top or bottom bar of the home page</string>
