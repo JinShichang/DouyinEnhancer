@@ -56,7 +56,7 @@ class VerifyDialog(private val hostContext: Context) : AlertDialog.Builder(Conte
             }
 
             runCatching {
-                (context as? Activity)?.injectModuleAppResources()
+                context.injectModuleAppResources()
                 VerifyDialog(context).show()
             }.onFailure {
                 YLog.error("$TAG: failed to show verify dialog", it)
