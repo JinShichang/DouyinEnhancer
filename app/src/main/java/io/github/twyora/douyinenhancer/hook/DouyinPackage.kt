@@ -3825,11 +3825,11 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                             matcher {
                                 usingStrings {
                                     add("HomeTabDataSourceServer", StringMatchType.Equals)
-                                    add("buildShowingTopTabIds", StringMatchType.Equals)
+                                    add("buildShowingTopTabIds")
                                 }
                             }
                         }.singleOrNull()
-                        val getShowingBottomTabIdsMethodData = homeTabDataSourceServerClassData?.let {
+                        val getShowingTopTabIdsMethodData = homeTabDataSourceServerClassData?.let {
                             bridge.findMethod {
                                 searchClasses = listOf(it)
                                 matcher {
@@ -3849,33 +3849,45 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                                             type = "com.google.gson.annotations.SerializedName"
                                                             addElement {
                                                                 name = "value"
-                                                                stringValue("is_show")
+                                                                stringValue("is_show", StringMatchType.Equals)
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
                                             declaredClass {
-                                                annotations {
+                                                fields {
                                                     add {
-                                                        type = "com.google.gson.annotations.SerializedName"
-                                                        addElement {
-                                                            name = "value"
-                                                            stringValue("movable")
+                                                        annotations {
+                                                            add {
+                                                                type = "com.google.gson.annotations.SerializedName"
+                                                                addElement {
+                                                                    name = "value"
+                                                                    stringValue("movable", StringMatchType.Equals)
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                     add {
-                                                        type = "com.google.gson.annotations.SerializedName"
-                                                        addElement {
-                                                            name = "value"
-                                                            stringValue("drag_type")
+                                                        annotations {
+                                                            add {
+                                                                type = "com.google.gson.annotations.SerializedName"
+                                                                addElement {
+                                                                    name = "value"
+                                                                    stringValue("drag_type", StringMatchType.Equals)
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                     add {
-                                                        type = "com.google.gson.annotations.SerializedName"
-                                                        addElement {
-                                                            name = "value"
-                                                            stringValue("extra")
+                                                        annotations {
+                                                            add {
+                                                                type = "com.google.gson.annotations.SerializedName"
+                                                                addElement {
+                                                                    name = "value"
+                                                                    stringValue("extra", StringMatchType.Equals)
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -3885,7 +3897,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                 }
                             }.singleOrNull()
                         }
-                        val getShowingTopTabIdsMethodData = homeTabDataSourceServerClassData?.let {
+                        val getShowingBottomTabIdsMethodData = homeTabDataSourceServerClassData?.let {
                             bridge.findMethod {
                                 searchClasses = listOf(it)
                                 matcher {
@@ -3896,10 +3908,12 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                     }
                                 }
                             }.singleOrNull { methodData ->
-                                methodData.name != getShowingBottomTabIdsMethodData?.name
+                                methodData.name != getShowingTopTabIdsMethodData?.name
                             }
                         }
-                        if (homeTabDataSourceServerClassData == null || getShowingBottomTabIdsMethodData == null || getShowingTopTabIdsMethodData == null) {
+                        if (homeTabDataSourceServerClassData == null || getShowingBottomTabIdsMethodData == null
+                            || getShowingTopTabIdsMethodData == null
+                        ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
                             return@homeTabDataSourceServer
                         }
@@ -3931,20 +3945,10 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                             matcher {
                                 usingStrings {
                                     add("HomeTabDataSourceDefault", StringMatchType.Equals)
-                                    add("buildEditedTopTabs", StringMatchType.Equals)
+                                    add("buildEditedTopTabs")
                                 }
                             }
                         }.singleOrNull()
-                        val getShowingBottomTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
-                            bridge.findMethod {
-                                searchClasses = listOf(it)
-                                matcher {
-                                    this@apply.homeTabDataSourceServer.getShowingBottomTabIds.nameOrNull?.let { methodName ->
-                                        name = methodName
-                                    }
-                                }
-                            }.singleOrNull()
-                        }
                         val getShowingTopTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
                             bridge.findMethod {
                                 searchClasses = listOf(it)
@@ -3955,7 +3959,19 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                 }
                             }.singleOrNull()
                         }
-                        if (homeTabDataSourceDefaultClassData == null || getShowingBottomTabIdsMethodData == null || getShowingTopTabIdsMethodData == null) {
+                        val getShowingBottomTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    this@apply.homeTabDataSourceServer.getShowingBottomTabIds.nameOrNull?.let { methodName ->
+                                        name = methodName
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        if (homeTabDataSourceDefaultClassData == null || getShowingBottomTabIdsMethodData == null
+                            || getShowingTopTabIdsMethodData == null
+                        ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
                             return@homeTabDataSourceDefault
                         }
