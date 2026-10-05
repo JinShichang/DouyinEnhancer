@@ -6,6 +6,7 @@ import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.HookParam
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
+import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
@@ -16,8 +17,22 @@ object HomeTopTabHooker : YukiBaseHooker() {
         get() = DouyinPackage.instance
 
     private val tabIdsToRemove by lazy {
-        // TODO
-        setOf(DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_TABLIVE)
+        val config = ConfigManager.homeTab
+        listOf(
+            config.hideHomepageFollow.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_FOLLOW,
+            config.hideHomepageFamiliar.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_FAMILIAR,
+            config.hideHomepageGroupon.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_GROUPON,
+            config.hideHomepageHotContainer.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_HOT_CONTAINER,
+            config.hideHomepageNearby.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_NEARBY,
+            config.hideHomepageMediumvideo.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_MEDIUMVIDEO,
+            config.hideHomepagePadHot.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_PAD_HOT,
+            config.hideHomepageHangout.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_HANGOUT,
+            config.hideHomepageTablive.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_TABLIVE
+        ).filter {
+            it.first
+        }.map {
+            it.second
+        }.toSet()
     }
 
     private val pruneTopTabIds: HookParam.() -> Unit = pruneTop@{
@@ -35,6 +50,11 @@ object HomeTopTabHooker : YukiBaseHooker() {
     }
 
     override fun onHook() {
+        if (!ConfigManager.homeTab.topMainSwitch.value) {
+            YLog.info("$TAG: top tab hiding disabled, skipping hook")
+            return
+        }
+
         installRemoveTopTabItemsRemoteHook()
         installRemoveTopTabItemsDefaultHook()
     }
