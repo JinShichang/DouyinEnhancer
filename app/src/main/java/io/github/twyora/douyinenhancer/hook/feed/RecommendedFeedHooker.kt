@@ -16,9 +16,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
     private val packageInstance
         get() = DouyinPackage.instance
 
-    private val verbose
-        get() = !ConfigManager.module.verboseDisabled.value
-
     private val kwdFilterTitleRegexes by lazy {
         val titleList = ConfigManager.recommendedFeedFilter.titleKeywords.value
         val regexMode = ConfigManager.recommendedFeedFilter.titleRegexMode.value
@@ -63,9 +60,7 @@ object RecommendedFeedHooker : YukiBaseHooker() {
 
     override fun onHook() {
         if (!ConfigManager.recommendedFeedFilter.mainSwitch.value) {
-            if (verbose) {
-                YLog.debug("$TAG: recommended feed filter master switch disabled, skip feed filter hook")
-            }
+            YLog.info("$TAG: recommended feed filter master switch disabled, skip feed filter hook")
             return
         }
 
@@ -149,9 +144,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                     collectCount !in collectCountMin.value..collectCountMax.value
                 }
             ) {
-                if (verbose) {
-                    YLog.debug("$TAG: filtered by collect count: $collectCount")
-                }
                 return true
             }
         }
@@ -162,9 +154,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                     commentCount !in commentCountMin.value..commentCountMax.value
                 }
             ) {
-                if (verbose) {
-                    YLog.debug("$TAG: filtered by comment count: $commentCount")
-                }
                 return true
             }
         }
@@ -175,9 +164,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                     diggCount !in diggCountMin.value..diggCountMax.value
                 }
             ) {
-                if (verbose) {
-                    YLog.debug("$TAG: filtered by digg count: $diggCount")
-                }
                 return true
             }
         }
@@ -188,9 +174,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                     shareCount !in shareCountMin.value..shareCountMax.value
                 }
             ) {
-                if (verbose) {
-                    YLog.debug("$TAG: filtered by share count: $shareCount")
-                }
                 return true
             }
         }
@@ -208,9 +191,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                     title.contains(it)
                 }
             ) {
-                if (verbose) {
-                    YLog.debug("$TAG: filtered by title: $title")
-                }
                 return true
             }
         }
@@ -221,9 +201,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
             if (authorObj != null) {
                 val uid = authorObj.getFieldOrNull<String>(packageInstance.user.uid())
                 if (uid != null && uid in uidFilters) {
-                    if (verbose) {
-                        YLog.debug("$TAG: filtered by author uid: $uid")
-                    }
                     return true
                 }
             }
@@ -238,9 +215,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                         nickname.contains(it)
                     }
                 ) {
-                    if (verbose) {
-                        YLog.debug("$TAG: filtered by author nickname: $nickname")
-                    }
                     return true
                 }
             }
@@ -253,9 +227,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                     desc.contains(it)
                 }
             ) {
-                if (verbose) {
-                    YLog.debug("$TAG: filtered by desc: $desc")
-                }
                 return true
             }
         }
