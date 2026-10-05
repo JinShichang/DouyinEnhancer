@@ -56,7 +56,9 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
                     it.copy(updateState = updateInfo)
                 }
 
-                updateNotifyEventInternal.tryEmit(Unit)
+                if (BuildConfig.VERSION_NAME != updateInfo.latestVersionName) {
+                    updateNotifyEventInternal.tryEmit(Unit)
+                }
             }
         }
     }
@@ -93,14 +95,10 @@ class HomeContentViewModel(application: Application) : AndroidViewModel(applicat
         val latestVersionName = latestReleaseJson.optString("name").removePrefix("v").removePrefix("V")
         val releaseBody = latestReleaseJson.optString("body")
 
-        if (latestVersionName.isNotBlank() && BuildConfig.VERSION_NAME != latestVersionName) {
-            HomeContentUpdateState(
-                latestVersionName = latestVersionName,
-                releaseBody = releaseBody
-            )
-        } else {
-            null
-        }
+        HomeContentUpdateState(
+            latestVersionName = latestVersionName,
+            releaseBody = releaseBody
+        )
     }.onFailure {
         YLog.error("$TAG: fetch latest release failed", it)
     }.getOrNull()
