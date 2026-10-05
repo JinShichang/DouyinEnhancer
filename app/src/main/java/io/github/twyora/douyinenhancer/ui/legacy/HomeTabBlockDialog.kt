@@ -36,7 +36,7 @@ class HomeTabBlockDialog(context: Context) :
                 ((ConfigManager.homeTab.kvConfig as FastKVStorage).fastKV) as SharedPreferences
             )
             preferenceManager.setFieldOrNull(Field("mEditor"), null)
-            addPreferencesFromResource(R.xml.pref_bottom_tab_block)
+            addPreferencesFromResource(R.xml.pref_home_tab_block)
 
             ConfigManager.homeTab.allConfigItems.filter { configItem ->
                 configItem.status != ConfigStateMode.NORMAL
