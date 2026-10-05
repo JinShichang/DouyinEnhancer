@@ -17,7 +17,7 @@ object HomeBottomTabHooker : YukiBaseHooker() {
         get() = DouyinPackage.instance
 
     private val tabIdsToRemove by lazy {
-        val config = ConfigManager.bottomTab
+        val config = ConfigManager.homeTab
         listOf(
             config.hideHomepageHome.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_HOME,
             config.hideHomepageMall.value to DouyinPackage.TabNodeModule.TAB_ID_HOMEPAGE_MALL,
@@ -46,7 +46,7 @@ object HomeBottomTabHooker : YukiBaseHooker() {
     }
 
     override fun onHook() {
-        if (!ConfigManager.bottomTab.mainSwitch.value) {
+        if (!ConfigManager.homeTab.bottomMainSwitch.value) {
             YLog.info("$TAG: bottom tab hiding disabled, skipping hook")
             return
         }

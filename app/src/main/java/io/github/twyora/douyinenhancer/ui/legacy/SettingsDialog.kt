@@ -138,7 +138,7 @@ class SettingsDialog(context: Context) :
             }
 
             "bottom_tab_block" -> {
-                BottomTabBlockDialog.show(context)
+                HomeTabBlockDialog.show(context)
                 true
             }
 
@@ -548,7 +548,7 @@ class SettingsDialog(context: Context) :
                 VerifyDialog.show(context)
             } else {
                 runCatching {
-                    (context as? Activity)?.injectModuleAppResources()
+                    context.injectModuleAppResources()
                     SettingsDialog(context).show()
                 }.onFailure {
                     YLog.error("$TAG: failed to show settings dialog", it)

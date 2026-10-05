@@ -18,7 +18,7 @@ import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
 import io.github.twyora.douyinenhancer.utils.Field
 import io.github.twyora.douyinenhancer.utils.setFieldOrNull
 
-class BottomTabBlockDialog(context: Context) :
+class HomeTabBlockDialog(context: Context) :
     AlertDialog.Builder(
         ContextThemeWrapper(
             context,
@@ -32,12 +32,13 @@ class BottomTabBlockDialog(context: Context) :
 
             preferenceManager.setFieldOrNull(
                 Field("mSharedPreferences"),
-                ((ConfigManager.bottomTab.kvConfig as FastKVStorage).fastKV) as SharedPreferences
+                // TODO: Urgent refactor required. This relies on internal implementation details
+                ((ConfigManager.homeTab.kvConfig as FastKVStorage).fastKV) as SharedPreferences
             )
             preferenceManager.setFieldOrNull(Field("mEditor"), null)
             addPreferencesFromResource(R.xml.pref_bottom_tab_block)
 
-            ConfigManager.bottomTab.allConfigItems.filter { configItem ->
+            ConfigManager.homeTab.allConfigItems.filter { configItem ->
                 configItem.status != ConfigStateMode.NORMAL
             }.forEach { hiddenConfigItem ->
                 findPreference(hiddenConfigItem.key)?.let {
@@ -51,7 +52,7 @@ class BottomTabBlockDialog(context: Context) :
         val activity = context as Activity
 
         val prefsFragment = PrefsFragment()
-        activity.fragmentManager.beginTransaction().add(prefsFragment, "BottomTabBlock").commit()
+        activity.fragmentManager.beginTransaction().add(prefsFragment, "HomeTabBlock").commit()
         activity.fragmentManager.executePendingTransactions()
 
         setView(prefsFragment.view)
@@ -68,10 +69,10 @@ class BottomTabBlockDialog(context: Context) :
 
         fun show(context: Context) {
             runCatching {
-                (context as? Activity)?.injectModuleAppResources()
-                BottomTabBlockDialog(context).show()
+                context.injectModuleAppResources()
+                HomeTabBlockDialog(context).show()
             }.onFailure {
-                YLog.error("$TAG: failed to show bottom tab block dialog", it)
+                YLog.error("$TAG: failed to show home tab block dialog", it)
             }
         }
     }
