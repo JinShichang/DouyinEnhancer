@@ -36,6 +36,7 @@
     <string name="pref_ui_keep_danmaku_visible_summary">使弹幕在清屏模式下仍然保持可见</string>
     <string name="recommended_feed_filter_main_switch_title">总开关</string>
     <string name="recommended_feed_filter_main_switch_summary">开启后可以使用推荐流过滤功能</string>
+    <string name="recommended_feed_filter_block_followed_author_title">隐藏已关注作者的内容</string>
     <string name="recommended_feed_filter_block_ad_title">✦ 屏蔽广告</string>
     <string name="recommended_feed_filter_block_ad_summary">尝试屏蔽推荐流中的广告（实验性功能）</string>
     <string name="recommended_feed_filter_block_ecom_aweme_title">✦ 屏蔽电商推广</string>

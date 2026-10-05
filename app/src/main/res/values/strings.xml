@@ -35,6 +35,7 @@
     <string name="pref_ui_keep_danmaku_visible_summary">Keep danmaku visible when entering clean mode</string>
     <string name="recommended_feed_filter_main_switch_title">Main switch</string>
     <string name="recommended_feed_filter_main_switch_summary">Turn on to use recommended feed filtering features</string>
+    <string name="recommended_feed_filter_block_followed_author_title">Hide content from followed creators</string>
     <string name="recommended_feed_filter_block_ad_title">✦ Block ads</string>
     <string name="recommended_feed_filter_block_ad_summary">Attempt to block ads in the feed (Experimental)</string>
     <string name="recommended_feed_filter_block_ecom_aweme_title">✦ Block e-commerce promotions</string>
