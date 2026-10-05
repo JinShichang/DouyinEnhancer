@@ -3911,8 +3911,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                 methodData.name != getShowingTopTabIdsMethodData?.name
                             }
                         }
-                        if (homeTabDataSourceServerClassData == null || getShowingBottomTabIdsMethodData == null
-                            || getShowingTopTabIdsMethodData == null
+                        if (homeTabDataSourceServerClassData == null || getShowingBottomTabIdsMethodData == null ||
+                            getShowingTopTabIdsMethodData == null
                         ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
                             return@homeTabDataSourceServer
@@ -3969,8 +3969,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                                 }
                             }.singleOrNull()
                         }
-                        if (homeTabDataSourceDefaultClassData == null || getShowingBottomTabIdsMethodData == null
-                            || getShowingTopTabIdsMethodData == null
+                        if (homeTabDataSourceDefaultClassData == null || getShowingBottomTabIdsMethodData == null ||
+                            getShowingTopTabIdsMethodData == null
                         ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
                             return@homeTabDataSourceDefault

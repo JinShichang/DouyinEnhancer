@@ -4,9 +4,9 @@ import com.highcapable.yukihookapi.hook.core.YukiMemberHookCreator
 import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.param.HookParam
+import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.hook.DouyinPackage
 import io.github.twyora.douyinenhancer.hook.HookOnMainProcess
-import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.utils.resolveMethodOrNull
 
 @HookOnMainProcess
@@ -59,9 +59,8 @@ object HomeTopTabHooker : YukiBaseHooker() {
         installRemoveTopTabItemsDefaultHook()
     }
 
-
-    private fun installRemoveTopTabItemsRemoteHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.homeTabDataSourceServer.selfClass?.resolveMethodOrNull(
+    private fun installRemoveTopTabItemsRemoteHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.homeTabDataSourceServer.selfClass?.resolveMethodOrNull(
             packageInstance.homeTabDataSourceServer.getShowingTopTabIds()
         )?.hook {
             after {
@@ -75,10 +74,9 @@ object HomeTopTabHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook top tab hiding", throwable)
             }
         }
-    }
 
-    private fun installRemoveTopTabItemsDefaultHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.homeTabDataSourceDefault.selfClass?.resolveMethodOrNull(
+    private fun installRemoveTopTabItemsDefaultHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.homeTabDataSourceDefault.selfClass?.resolveMethodOrNull(
             packageInstance.homeTabDataSourceDefault.getShowingTopTabIds()
         )?.hook {
             after {
@@ -92,5 +90,4 @@ object HomeTopTabHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook default top tab hiding", throwable)
             }
         }
-    }
 }

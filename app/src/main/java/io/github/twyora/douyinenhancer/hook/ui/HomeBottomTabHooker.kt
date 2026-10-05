@@ -55,8 +55,8 @@ object HomeBottomTabHooker : YukiBaseHooker() {
         installRemoveBottomTabItemsDefaultHook()
     }
 
-    private fun installRemoveBottomTabItemsRemoteHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.homeTabDataSourceServer.selfClass?.resolveMethodOrNull(
+    private fun installRemoveBottomTabItemsRemoteHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.homeTabDataSourceServer.selfClass?.resolveMethodOrNull(
             packageInstance.homeTabDataSourceServer.getShowingBottomTabIds()
         )?.hook {
             after {
@@ -70,10 +70,9 @@ object HomeBottomTabHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook bottom tab hiding", throwable)
             }
         }
-    }
 
-    private fun installRemoveBottomTabItemsDefaultHook(): YukiMemberHookCreator.MemberHookCreator.Result? {
-        return packageInstance.homeTabDataSourceDefault.selfClass?.resolveMethodOrNull(
+    private fun installRemoveBottomTabItemsDefaultHook(): YukiMemberHookCreator.MemberHookCreator.Result? =
+        packageInstance.homeTabDataSourceDefault.selfClass?.resolveMethodOrNull(
             packageInstance.homeTabDataSourceDefault.getShowingBottomTabIds()
         )?.hook {
             after {
@@ -87,5 +86,4 @@ object HomeBottomTabHooker : YukiBaseHooker() {
                 YLog.error("$TAG: failed to hook default bottom tab hiding", throwable)
             }
         }
-    }
 }
