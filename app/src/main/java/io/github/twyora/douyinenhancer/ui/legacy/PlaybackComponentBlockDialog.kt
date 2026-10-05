@@ -63,7 +63,7 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
 
         fun show(context: Context) {
             runCatching {
-                (context as? Activity)?.injectModuleAppResources()
+                context.injectModuleAppResources()
                 PlaybackComponentBlockDialog(context).show()
             }.onFailure {
                 YLog.error("$TAG: failed to show playback component block dialog", it)
