@@ -1093,6 +1093,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
 
         @Volatile
         lateinit var instance: DouyinPackage
+            private set
 
         fun init(classLoader: ClassLoader, context: Context) {
             instance = DouyinPackage(classLoader, context)
