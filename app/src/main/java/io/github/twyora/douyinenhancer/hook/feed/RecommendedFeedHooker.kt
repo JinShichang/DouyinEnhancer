@@ -73,31 +73,51 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                 val removed = awemeList.removeIf {
                     with(ConfigManager.recommendedFeedFilter) {
                         // begin unvalidated filter condition
-                        (blockAd.value &&
-                            it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.getAd()) == true) ||
-                            (blockEcom.value &&
-                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isEcomAweme()) == true) ||
-                            (blockGrouponLargeCard.value &&
-                                it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null) ||
-                            (blockGrouponLargeCard.value &&
-                                it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null) ||
-                            (blockLive.value &&
-                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isLive()) == true) ||
-                            (blockMultiImage.value &&
-                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isMultiImage()) == true) ||
+                        (
+                            blockAd.value &&
+                                it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.getAd()) == true
+                            ) ||
+                            (
+                                blockEcom.value &&
+                                    it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isEcomAweme()) == true
+                                ) ||
+                            (
+                                blockGrouponLargeCard.value &&
+                                    it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null
+                                ) ||
+                            (
+                                blockGrouponLargeCard.value &&
+                                    it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null
+                                ) ||
+                            (
+                                blockLive.value &&
+                                    it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isLive()) == true
+                                ) ||
+                            (
+                                blockMultiImage.value &&
+                                    it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isMultiImage()) == true
+                                ) ||
                             // end unvalidated filter condition
-                            (blockFollowedAuthor.value && it?.invokeMethodOrNull<Int>(
-                                packageInstance.aweme.getFollowStatus()
-                            ) != DouyinPackage.AwemeModule.FOLLOW_STATUS_UNFOLLOWED) ||
-                            (it?.let { aweme ->
-                                shouldFilterByDuration(aweme)
-                            } == true) ||
-                            (it?.let { aweme ->
-                                shouldFilterByInteractionStats(aweme)
-                            } == true) ||
-                            (it?.let { aweme ->
-                                shouldFilterByKeyword(aweme)
-                            } == true)
+                            (
+                                blockFollowedAuthor.value && it?.invokeMethodOrNull<Int>(
+                                    packageInstance.aweme.getFollowStatus()
+                                ) != DouyinPackage.AwemeModule.FOLLOW_STATUS_UNFOLLOWED
+                                ) ||
+                            (
+                                it?.let { aweme ->
+                                    shouldFilterByDuration(aweme)
+                                } == true
+                                ) ||
+                            (
+                                it?.let { aweme ->
+                                    shouldFilterByInteractionStats(aweme)
+                                } == true
+                                ) ||
+                            (
+                                it?.let { aweme ->
+                                    shouldFilterByKeyword(aweme)
+                                } == true
+                                )
                     }
                 }
                 if (!removed) {
