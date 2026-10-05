@@ -8,7 +8,7 @@ on:
     paths-ignore:
       - ".github/**"
       - "*.md"
-      - "docs/*"
+      - "docs/**"
       - "LICENSE"
 
 permissions:
