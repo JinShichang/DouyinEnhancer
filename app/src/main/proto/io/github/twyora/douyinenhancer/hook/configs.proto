@@ -397,17 +397,19 @@ message AbsTask {
   optional Method get_target_file_paths = 2;
 }
 
-message TabNode {
+// begin IHomeTabDataSource implementers
+message HomeTabDataSourceServer {
   optional Class class = 1;
-  optional Field tab_id = 2;
-  optional Field children = 3;
+  optional Method get_showing_bottom_tab_ids = 2;
+  optional Method get_showing_top_tab_ids = 3;
 }
 
-message MPFBottomTabComponent {
+message HomeTabDataSourceDefault {
   optional Class class = 1;
-  optional Field tab_root = 2;
-  optional Method build_tab_views = 3;
+  optional Method get_showing_bottom_tab_ids = 2;
+  optional Method get_showing_top_tab_ids = 3;
 }
+// end IHomeTabDataSource implementers
 
 message HookInfo {
   uint64 last_update_time = 1;
@@ -464,8 +466,8 @@ message HookInfo {
   optional StoryServiceImpl story_service_impl = 61;
   optional AbsTask abs_task = 62;
   optional VideoPlayerStatus video_player_status = 63;
-  optional TabNode tab_node = 64;
-  optional MPFBottomTabComponent mpf_bottom_tab_component = 65;
+  optional HomeTabDataSourceServer home_tab_data_source_server = 66;
+  optional HomeTabDataSourceDefault home_tab_data_source_default = 67;
 
-  reserved 13, 18, 32, 35, 36, 38, 39, 40, 55;
+  reserved 13, 18, 32, 35, 36, 38, 39, 40, 55, 64, 65;
 }
