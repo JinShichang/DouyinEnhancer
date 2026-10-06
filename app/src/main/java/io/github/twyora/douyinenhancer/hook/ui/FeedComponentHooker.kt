@@ -87,7 +87,7 @@ object FeedComponentHooker : YukiBaseHooker() {
     }
 
     override fun onHook() {
-        if (ConfigManager.playbackComponentBlock.mainSwitch.value) {
+        if (!ConfigManager.playbackComponentBlock.mainSwitch.value) {
             if (verbose) {
                 YLog.debug("$TAG: playback component block is disabled, skipping hook")
             }
