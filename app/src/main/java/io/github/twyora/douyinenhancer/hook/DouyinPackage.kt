@@ -392,6 +392,12 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun nickname() = Field(configs.nickname.nameOrNull)
 
         fun uid() = Field(configs.uid.nameOrNull)
+
+        companion object {
+            const val FOLLOW_STATUS_UNFOLLOWED = 0
+//            const val FOLLOW_STATUS_FOLLOWING = 1
+//            const val FOLLOW_STATUS_MUTUAL_FOLLOW = 2
+        }
     }
 
     class AwemeModule internal constructor(private val configs: Configs.Aweme, private val classLoader: ClassLoader) {
@@ -461,12 +467,6 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
             configs.getFollowStatus.nameOrNull,
             configs.getFollowStatus.parameters.valuesListOrNull
         )
-
-        companion object {
-            const val FOLLOW_STATUS_UNFOLLOWED = 0
-//            const val FOLLOW_STATUS_FOLLOWING = 1
-//            const val FOLLOW_STATUS_MUTUAL_FOLLOW = 2
-        }
     }
 
     class AwemeStatusModule internal constructor(private val configs: Configs.AwemeStatus, private val classLoader: ClassLoader) {
