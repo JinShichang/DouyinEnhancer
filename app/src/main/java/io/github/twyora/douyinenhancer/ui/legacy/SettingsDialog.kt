@@ -147,12 +147,12 @@ class SettingsDialog(context: Context) :
                 if (!ConfigManager.misc.hiddenFeatureEnabled.value) {
                     if (++hiddenFeatureClickCount == HIDDEN_FEATURE_TRIGGER_CLICK_COUNT) {
                         ConfigManager.misc.hiddenFeatureEnabled.value = true
-                        activity.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_restart_required))
+                        context.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_restart_required))
                     } else if (hiddenFeatureClickCount >= HIDDEN_FEATURE_HINT_FROM_CLICK_COUNT) {
-                        activity.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_steps_remaining))
+                        context.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_steps_remaining))
                     }
                 } else {
-                    activity.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_already_enabled))
+                    context.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_already_enabled))
                 }
                 true
             }
@@ -163,7 +163,7 @@ class SettingsDialog(context: Context) :
 
             "invalid_hook_info" -> {
                 ConfigManager.module.hookInfoGeneration.value++
-                activity.toast(ModuleApp.instance.resources.getString(R.string.success))
+                context.toast(ModuleApp.instance.resources.getString(R.string.success))
                 true
             }
 
@@ -175,7 +175,7 @@ class SettingsDialog(context: Context) :
                     presetFile.writeText("")
                 }
                 ConfigManager.module.hookInfoGeneration.value++
-                activity.toast(ModuleApp.instance.resources.getString(R.string.success))
+                context.toast(ModuleApp.instance.resources.getString(R.string.success))
 
                 true
             }
@@ -238,7 +238,7 @@ class SettingsDialog(context: Context) :
                                     }
                                 }
                             }.onFailure {
-                                activity.toast(
+                                context.toast(
                                     ModuleApp.instance.resources.getString(
                                         R.string.config_export_failed,
                                         it.message ?: it.toString()
@@ -246,7 +246,7 @@ class SettingsDialog(context: Context) :
                                 )
                                 YLog.error("$TAG: export config failed", it)
                             }.onSuccess {
-                                activity.toast(ModuleApp.instance.resources.getString(R.string.config_export_success))
+                                context.toast(ModuleApp.instance.resources.getString(R.string.config_export_success))
                             }
                         }
 
@@ -304,7 +304,7 @@ class SettingsDialog(context: Context) :
                                     importedSettings.close()
                                 }
                             }.onFailure {
-                                activity.toast(
+                                context.toast(
                                     ModuleApp.instance.resources.getString(
                                         R.string.config_import_failed,
                                         it.message ?: it.toString()
@@ -312,7 +312,7 @@ class SettingsDialog(context: Context) :
                                 )
                                 YLog.error("$TAG: import config failed", it)
                             }.onSuccess {
-                                activity.toast(ModuleApp.instance.resources.getString(R.string.config_import_success))
+                                context.toast(ModuleApp.instance.resources.getString(R.string.config_import_success))
                             }
                             settingsKvaTemp.delete()
                             settingsKvbTemp.delete()
@@ -350,7 +350,7 @@ class SettingsDialog(context: Context) :
                                 )
                             }
                         ) {
-                            activity.toast(ModuleApp.instance.resources.getString(R.string.untrusted_obfuscation_map))
+                            context.toast(ModuleApp.instance.resources.getString(R.string.untrusted_obfuscation_map))
                         }
 
                         File(
@@ -361,7 +361,7 @@ class SettingsDialog(context: Context) :
                         }
                         ConfigManager.module.hookInfoGeneration.value++
                     }.onFailure {
-                        activity.toast(
+                        context.toast(
                             ModuleApp.instance.resources.getString(
                                 R.string.import_failed,
                                 it.message ?: it.toString()
@@ -369,7 +369,7 @@ class SettingsDialog(context: Context) :
                         )
                         YLog.error("$TAG: load custom hook info failed", it)
                     }.onSuccess {
-                        activity.toast(ModuleApp.instance.resources.getString(R.string.import_success_restart_required))
+                        context.toast(ModuleApp.instance.resources.getString(R.string.import_success_restart_required))
                     }
                 }
 
@@ -393,7 +393,7 @@ class SettingsDialog(context: Context) :
                     EXPORT_CONFIG
                 )
             }.onFailure {
-                activity.toast(it.message ?: it.toString())
+                context.toast(it.message ?: it.toString())
             }
 
             return true
@@ -409,7 +409,7 @@ class SettingsDialog(context: Context) :
                     IMPORT_CONFIG
                 )
             }.onFailure {
-                activity.toast(it.message ?: it.toString())
+                context.toast(it.message ?: it.toString())
             }
 
             return true
@@ -425,7 +425,7 @@ class SettingsDialog(context: Context) :
                     LOAD_CUSTOM_HOOK_INFO
                 )
             }.onFailure {
-                activity.toast(it.message ?: it.toString())
+                context.toast(it.message ?: it.toString())
             }
 
             return true
@@ -469,7 +469,7 @@ class SettingsDialog(context: Context) :
                     (counter - 1 + ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD) % ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD
                 ConfigManager.module.notifyUpdateCooldown.value = newCounter
                 if (newCounter == 0) {
-                    activity.toast(ModuleApp.instance.resources.getString(R.string.notify_update_available))
+                    context.toast(ModuleApp.instance.resources.getString(R.string.notify_update_available))
                 }
             } else {
                 findPreference("update")?.apply {
@@ -533,7 +533,7 @@ class SettingsDialog(context: Context) :
             restartApplication(activity)
         }
         setOnDismissListener {
-            activity.toast(ModuleApp.instance.resources.getString(R.string.restart_required))
+            context.toast(ModuleApp.instance.resources.getString(R.string.restart_required))
             activity.fragmentManager.beginTransaction().remove(prefsFragment).commitAllowingStateLoss()
             nightModeTextHookResult?.remove()
         }
