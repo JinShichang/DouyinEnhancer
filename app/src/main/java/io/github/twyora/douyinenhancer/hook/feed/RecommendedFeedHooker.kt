@@ -86,10 +86,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                                     it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null
                                 ) ||
                             (
-                                blockGrouponLargeCard.value &&
-                                    it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null
-                                ) ||
-                            (
                                 blockLive.value &&
                                     it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isLive()) == true
                                 ) ||
@@ -101,7 +97,9 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                             (
                                 blockFollowedAuthor.value && it?.invokeMethodOrNull<Int>(
                                     packageInstance.aweme.getFollowStatus()
-                                ) != DouyinPackage.AwemeModule.FOLLOW_STATUS_UNFOLLOWED
+                                )?.takeIf { status ->
+                                    status != DouyinPackage.UserModule.FOLLOW_STATUS_UNFOLLOWED
+                                } != null
                                 ) ||
                             (
                                 it?.let { aweme ->
