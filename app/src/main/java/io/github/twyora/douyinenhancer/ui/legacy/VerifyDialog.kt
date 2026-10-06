@@ -13,6 +13,7 @@ import io.github.twyora.douyinenhancer.bridge.ModuleApp
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.databinding.VerifyDialogBinding
 import io.github.twyora.douyinenhancer.utils.toast
+import java.util.Locale
 
 class VerifyDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
     private val binding = VerifyDialogBinding.inflate(
@@ -52,7 +53,8 @@ class VerifyDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(c
         private val TAG = this::class.simpleName
 
         fun show(context: Context) {
-            if (!shouldVerify()) {
+            if (!shouldVerify(context)) {
+                YLog.info("$TAG: no verification required, skipping VerifyDialog")
                 return
             }
 
@@ -60,13 +62,23 @@ class VerifyDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(c
                 context.injectModuleAppResources()
                 VerifyDialog(context).show()
             }.onFailure {
-                YLog.error("$TAG: failed to show verify dialog", it)
+                YLog.error("$TAG: failed to show VerifyDialog", it)
             }
         }
 
-        fun shouldVerify(): Boolean {
+        fun shouldVerify(context: Context): Boolean {
+            val isChineseLocale = runCatching {
+                context.resources.configuration.locales[0].language ==
+                    Locale.CHINESE.language
+            }.onFailure {
+                YLog.error("$TAG: failed to read device locale", it)
+            }.getOrDefault(false)
             val lastVerifiedVersion = ConfigManager.module.lastVerifiedVersion.value
-            return !(BuildConfig.DEBUG || BuildConfig.VERSION_CODE == lastVerifiedVersion)
+
+            return !(
+                BuildConfig.DEBUG || !isChineseLocale ||
+                    BuildConfig.VERSION_CODE == lastVerifiedVersion
+                )
         }
     }
 }
