@@ -14,7 +14,7 @@ import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.databinding.VerifyDialogBinding
 import io.github.twyora.douyinenhancer.utils.toast
 
-class VerifyDialog(private val hostContext: Context) : AlertDialog.Builder(ContextThemeWrapper(hostContext, R.style.MainTheme)) {
+class VerifyDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(context, R.style.MainTheme)) {
     private val binding = VerifyDialogBinding.inflate(
         LayoutInflater.from(ContextThemeWrapper(context, R.style.MainTheme))
     )
@@ -40,9 +40,9 @@ class VerifyDialog(private val hostContext: Context) : AlertDialog.Builder(Conte
                 ConfigManager.module.lastVerifiedVersion.value = BuildConfig.VERSION_CODE
                 dialog.dismiss()
 
-                (hostContext as? Activity)?.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_success))
+                (context as? Activity)?.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_success))
             } else {
-                (hostContext as? Activity)?.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_failure))
+                (context as? Activity)?.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_failure))
             }
         }
         return dialog
