@@ -86,10 +86,6 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                                     it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null
                                 ) ||
                             (
-                                blockGrouponLargeCard.value &&
-                                    it?.getFieldOrNull<Any>(packageInstance.aweme.grouponLargeCard()) != null
-                                ) ||
-                            (
                                 blockLive.value &&
                                     it?.invokeMethodOrNull<Boolean>(packageInstance.aweme.isLive()) == true
                                 ) ||
