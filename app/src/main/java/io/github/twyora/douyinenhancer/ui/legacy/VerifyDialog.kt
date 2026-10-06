@@ -1,6 +1,5 @@
 package io.github.twyora.douyinenhancer.ui.legacy
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.view.ContextThemeWrapper
@@ -41,9 +40,9 @@ class VerifyDialog(context: Context) : AlertDialog.Builder(ContextThemeWrapper(c
                 ConfigManager.module.lastVerifiedVersion.value = BuildConfig.VERSION_CODE
                 dialog.dismiss()
 
-                (context as? Activity)?.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_success))
+                context.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_success))
             } else {
-                (context as? Activity)?.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_failure))
+                context.toast(ModuleApp.instance.resources.getString(R.string.verify_toast_failure))
             }
         }
         return dialog
