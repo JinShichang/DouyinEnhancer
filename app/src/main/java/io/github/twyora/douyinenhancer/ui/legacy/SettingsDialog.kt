@@ -129,12 +129,12 @@ class SettingsDialog(context: Context) :
         @Deprecated("Deprecated in Java")
         override fun onPreferenceClick(preference: Preference?) = when (preference?.key) {
             "recommend_feed_filter" -> {
-                RecommendedFeedFilterDialog(context).show()
+                RecommendedFeedFilterDialog.show(context)
                 true
             }
 
             "playback_component_block" -> {
-                PlaybackComponentBlockDialog(context).show()
+                PlaybackComponentBlockDialog.show(context)
                 true
             }
 

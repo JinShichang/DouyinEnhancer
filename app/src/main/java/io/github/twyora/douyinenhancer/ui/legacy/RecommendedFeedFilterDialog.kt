@@ -9,6 +9,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.children
+import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
+import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.R
 import io.github.twyora.douyinenhancer.bridge.ModuleApp
 import io.github.twyora.douyinenhancer.config.ConfigManager
@@ -244,6 +246,17 @@ class RecommendedFeedFilterDialog(context: Context) : AlertDialog.Builder(Contex
     }
 
     companion object {
+        private val TAG = this::class.simpleName
+
+        fun show(context: Context) {
+            runCatching {
+                context.injectModuleAppResources()
+                RecommendedFeedFilterDialog(context).show()
+            }.onFailure {
+                YLog.error("$TAG: failed to show recommended feed filter dialog", it)
+            }
+        }
+
         private fun pushKeywordItem(context: Context, container: ViewGroup): ItemInputWithDeleteBinding {
             val itemBinding = ItemInputWithDeleteBinding.inflate(
                 LayoutInflater.from(ContextThemeWrapper(context, R.style.MainTheme)),
