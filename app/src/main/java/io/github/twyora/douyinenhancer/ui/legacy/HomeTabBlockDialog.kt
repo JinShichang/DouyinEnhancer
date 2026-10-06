@@ -12,6 +12,7 @@ import android.view.ContextThemeWrapper
 import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.R
+import io.github.twyora.douyinenhancer.bridge.ModuleApp
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.config.gate.ConfigStateMode
 import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
@@ -56,7 +57,7 @@ class HomeTabBlockDialog(context: Context) :
         activity.fragmentManager.executePendingTransactions()
 
         setView(prefsFragment.view)
-        setTitle(R.string.bottom_tab_block_dialog_title)
+        setTitle(ModuleApp.instance.resources.getString(R.string.bottom_tab_block_dialog_title))
         setNegativeButton(android.R.string.cancel, null)
         setPositiveButton(android.R.string.ok, null)
         setOnDismissListener {
