@@ -550,7 +550,7 @@ class SettingsDialog(context: Context) :
         private const val LOAD_CUSTOM_HOOK_INFO = 2
 
         fun show(context: Context) {
-            if (VerifyDialog.shouldVerify()) {
+            if (VerifyDialog.shouldVerify(context)) {
                 YLog.info("$TAG: unverified version, redirecting to verify dialog")
                 VerifyDialog.show(context)
             } else {
