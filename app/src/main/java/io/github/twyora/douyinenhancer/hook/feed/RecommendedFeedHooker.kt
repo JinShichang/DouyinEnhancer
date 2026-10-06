@@ -97,7 +97,9 @@ object RecommendedFeedHooker : YukiBaseHooker() {
                             (
                                 blockFollowedAuthor.value && it?.invokeMethodOrNull<Int>(
                                     packageInstance.aweme.getFollowStatus()
-                                ) != DouyinPackage.AwemeModule.FOLLOW_STATUS_UNFOLLOWED
+                                )?.takeIf { status ->
+                                    status != DouyinPackage.AwemeModule.FOLLOW_STATUS_UNFOLLOWED
+                                } != null
                                 ) ||
                             (
                                 it?.let { aweme ->
