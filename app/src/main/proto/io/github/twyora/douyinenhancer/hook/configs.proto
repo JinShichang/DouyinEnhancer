@@ -360,14 +360,6 @@ message VideoEvent {
   reserved 2;
 }
 
-message CleanModePresenter {
-  optional Class class = 1;
-  optional Method enter_clean_mode = 2;
-  optional Method set_visibility = 3 [deprecated = true];
-  optional Method handle_view = 4;
-  optional Method collect_hidden_views = 5;
-}
-
 message NativeCleanMode {
   optional Class service_class = 1;
   optional Class command_class = 2;
@@ -376,13 +368,10 @@ message NativeCleanMode {
   optional Method inverse = 5;
   optional Field auto_quit = 6;
   optional Field content = 7;
-}
-
-message DanmakuView {
-  optional Class class = 1;
-  optional Method on_attached_to_window = 2;
-  optional Class container_class = 3;
-  optional Method create_container = 4;
+  optional Class danmaku_policy_class = 8;
+  optional Method danmaku_policy_factory = 9;
+  optional Field white_list = 10;
+  optional Method append_white_list = 11;
 }
 
 message CleanModeChrome {
@@ -479,8 +468,6 @@ message HookInfo {
   optional ListenAwemeFilter listen_aweme_filter = 50;
   optional BaseListFragmentPanel base_list_fragment_panel = 51;
   optional VideoEvent video_event = 52;
-  optional CleanModePresenter clean_mode_presenter = 53;
-  optional DanmakuView danmaku_view = 54;
   optional FluxComponentId flux_component_id = 56;
   optional FluxComponentDataAction flux_component_data_action = 57;
   optional Heif heif = 58;
@@ -494,5 +481,6 @@ message HookInfo {
   optional NativeCleanMode native_clean_mode = 66;
   optional CleanModeChrome clean_mode_chrome = 67;
 
-  reserved 13, 18, 32, 35, 36, 38, 39, 40, 55;
+  reserved 13, 18, 32, 35, 36, 38, 39, 40, 53, 54, 55;
+  reserved "clean_mode_presenter", "danmaku_view";
 }

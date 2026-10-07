@@ -119,10 +119,8 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     val baseListFragmentPanel = BaseListFragmentPanelModule(hookInfo.baseListFragmentPanel, classLoader)
     val videoPlayerStatus = VideoPlayerStatusModule(hookInfo.videoPlayerStatus, classLoader)
     val videoEvent = VideoEventModule(hookInfo.videoEvent, classLoader)
-    val cleanModePresenter = CleanModePresenterModule(hookInfo.cleanModePresenter, classLoader)
     val cleanModeChrome = CleanModeChromeModule(hookInfo.cleanModeChrome, classLoader)
     val nativeCleanMode = NativeCleanModeModule(hookInfo.nativeCleanMode, classLoader)
-    val danmakuView = DanmakuViewModule(hookInfo.danmakuView, classLoader)
     val fluxComponentId = FluxComponentIdModule(hookInfo.fluxComponentId, classLoader)
     val fluxComponentDataAction = FluxComponentDataActionModule(hookInfo.fluxComponentDataAction, classLoader)
     val heif = HeifModule(hookInfo.heif, classLoader)
@@ -940,12 +938,17 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     class NativeCleanModeModule internal constructor(private val configs: Configs.NativeCleanMode, private val classLoader: ClassLoader) {
         val serviceClass by weak { configs.serviceClass.nameOrNull?.toClass(classLoader) }
         val commandClass by weak { configs.commandClass.nameOrNull?.toClass(classLoader) }
+        val danmakuPolicyClass by weak { configs.danmakuPolicyClass.nameOrNull?.toClass(classLoader) }
 
         fun serviceInstance() = Method(configs.serviceInstance.nameOrNull, emptyList())
         fun toggle() = Method(configs.toggle.nameOrNull, configs.toggle.parameters.valuesListOrNull)
         fun inverse() = Method(configs.inverse.nameOrNull, emptyList())
         fun autoQuit() = Field(configs.autoQuit.nameOrNull)
         fun content() = Field(configs.content.nameOrNull)
+        fun danmakuPolicyFactory() =
+            Method(configs.danmakuPolicyFactory.nameOrNull, configs.danmakuPolicyFactory.parameters.valuesListOrNull)
+        fun whiteList() = Field(configs.whiteList.nameOrNull)
+        fun appendWhiteList() = Method(configs.appendWhiteList.nameOrNull, configs.appendWhiteList.parameters.valuesListOrNull)
     }
 
     class CleanModeChromeModule internal constructor(private val configs: Configs.CleanModeChrome, private val classLoader: ClassLoader) {
@@ -958,47 +961,6 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun uiServiceInstance() = Field(configs.uiServiceInstance.nameOrNull)
         fun topContainerId() = Method(configs.topContainerId.nameOrNull, emptyList())
         fun topShadowId() = Method(configs.topShadowId.nameOrNull, emptyList())
-    }
-
-    class CleanModePresenterModule internal constructor(
-        private val configs: Configs.CleanModePresenter,
-        private val classLoader: ClassLoader
-    ) {
-        val selfClass by weak {
-            configs.class_.nameOrNull?.toClass(classLoader)
-        }
-
-        fun enterCleanMode() = Method(
-            configs.enterCleanMode.nameOrNull,
-            configs.enterCleanMode.parameters.valuesListOrNull
-        )
-
-        fun handleView() = Method(configs.handleView.nameOrNull, configs.handleView.parameters.valuesListOrNull)
-
-        fun collectHiddenViews() = Method(
-            configs.collectHiddenViews.nameOrNull,
-            configs.collectHiddenViews.parameters.valuesListOrNull
-        )
-    }
-
-    class DanmakuViewModule internal constructor(private val configs: Configs.DanmakuView, private val classLoader: ClassLoader) {
-        val selfClass by weak {
-            configs.class_.nameOrNull?.toClass(classLoader)
-        }
-
-        fun onAttachedToWindow() = Method(
-            configs.onAttachedToWindow.nameOrNull,
-            configs.onAttachedToWindow.parameters.valuesListOrNull
-        )
-
-        val containerClass by weak {
-            configs.containerClass.nameOrNull?.toClass(classLoader)
-        }
-
-        fun createContainer() = Method(
-            configs.createContainer.nameOrNull,
-            configs.createContainer.parameters.valuesListOrNull
-        )
     }
 
     class HeifModule internal constructor(private val configs: Configs.Heif, private val classLoader: ClassLoader) {
@@ -3340,92 +3302,17 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 }
 
                 runCatching {
+                    nativeCleanMode = nativeCleanMode.toBuilder()
+                        .mergeFrom(NativeCleanModeSymbols.resolveDanmakuPolicy(bridge))
+                        .build()
+                }.onFailure {
+                    YLog.error("$TAG: failed to resolve native danmaku policy", it)
+                }
+
+                runCatching {
                     cleanModeChrome = NativeCleanModeChromeSymbols.resolve(bridge)
                 }.onFailure {
                     YLog.error("$TAG: failed to resolve clean mode chrome protection", it)
-                }
-
-                cleanModePresenter = cleanModePresenter {
-                    runCatching {
-                        val cleanModePresenterClassData = bridge.getClassData(
-                            "com.ss.android.ugc.aweme.feed.plato.business.contentconsumption.cleanmode.CleanModePresenter"
-                        )
-                        val enterCleanModeMethodData = cleanModePresenterClassData?.let {
-                            bridge.findMethod {
-                                searchClasses = listOf(it)
-                                matcher {
-                                    // in some of the newer versions, the parameter order has changed
-                                    paramCount = 5
-                                    invokeMethods {
-                                        add {
-                                            descriptor =
-                                                "Lcom/ss/android/ugc/aweme/feed/adapter/IFeedViewHolder;->blockCommonCleanModeEvent(Z)Z"
-                                        }
-                                    }
-                                }
-                            }.singleOrNull()
-                        }
-                        if (cleanModePresenterClassData == null ||
-                            enterCleanModeMethodData == null
-                        ) {
-                            YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
-                            return@cleanModePresenter
-                        }
-
-                        class_ = class_ {
-                            name = cleanModePresenterClassData.name
-                        }
-                        enterCleanMode = method {
-                            name = enterCleanModeMethodData.methodName
-                            parameters = MethodKt.parameters {
-                                values.clear()
-                                values.addAll(enterCleanModeMethodData.paramTypeNames)
-                            }
-                        }
-                        val handleViewMethod = bridge.findMethod {
-                            searchClasses = listOf(cleanModePresenterClassData)
-                            matcher {
-                                paramTypes("android.view.View", "int", "int", "boolean")
-                                usingStrings("no VisibilityManager for view: ")
-                            }
-                        }.single()
-                        handleView = method {
-                            name = handleViewMethod.name
-                            parameters = MethodKt.parameters { values.addAll(handleViewMethod.paramTypeNames) }
-                        }
-                        val collectHiddenMethod = bridge.findMethod {
-                            searchClasses = listOf(cleanModePresenterClassData)
-                            matcher {
-                                modifiers = Modifier.PUBLIC or Modifier.STATIC
-                                paramTypes("android.view.View", "java.util.List")
-                                returnType = "java.util.List"
-                            }
-                        }.single()
-                        collectHiddenViews = method {
-                            name = collectHiddenMethod.name
-                            parameters = MethodKt.parameters { values.addAll(collectHiddenMethod.paramTypeNames) }
-                        }
-                    }.onFailure {
-                        YLog.error(populateFailedMsg.format(TAG), it)
-                    }
-                }
-
-                danmakuView = danmakuView {
-                    class_ = class_ {
-                        name = "com.bytedance.common.ultra.danmaku.view.DanmakuView"
-                    }
-                    onAttachedToWindow = method {
-                        name = "onAttachedToWindow"
-                    }
-                    containerClass = class_ {
-                        name = "com.ss.android.ugc.aweme.feed.danmaku.ultra.DanmakuModule"
-                    }
-                    createContainer = method {
-                        name = "onCreateView"
-                        parameters = MethodKt.parameters {
-                            values.addAll(listOf("android.content.Context", "android.view.ViewGroup"))
-                        }
-                    }
                 }
 
                 fluxComponentId = fluxComponentId {

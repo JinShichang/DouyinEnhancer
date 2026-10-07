@@ -94,6 +94,26 @@ GitHub 工作流文件保持合并前内容，不推送标签或发布 GitHub Re
 
 r5 验证：格式检查、8 项播放状态测试（0 失败/0 错误）、Debug/Release 构建和 Release lintVital 均通过。生成的 HookerRegistry 同时包含 BottomTabHooker、三个清爽模式 Hook 和 DanmakuViewHooker；生成的 protobuf 代码确认编号 64/65/66/67 分别对应上游导航项和本地清爽映射。Release APK 的 versionCode 为 1401，v2 签名通过，证书与 r4 相同；外层 `artifacts/DouyinEnhancer_0.14.0-cleanmode-r5.apk` 的 SHA-256 为 `cda80731775a6dc2797abac4d4672f0871f022cdc25970170c5ef9c9d4483257`。`git diff --check` 通过；构建进程报告成功后延迟退出，最终退出码为 0，本地构建脚本已恢复 daemon JVM criteria。构建日志包含上游生成代码、废弃 API 以及 Compose native library 无法去除调试符号的警告，不影响本次构建成功。
 
+## r6：弹幕保留迁移到原生命令策略（2026-10-07）
+
+用户反馈 r5 在清爽模式播放和暂停时均没有弹幕，关闭清爽模式后恢复；此前 r3 实测正常。历史源码与 APK 对比没有证明上游合并删除了弹幕修复，因此不能直接把合并认定为根因。最初尝试增加 UI 请求记录、附着迁移和绘制拦截，用户指出这继续偏离作者“优先在数据层实现”的建议。该尝试已撤回，源码、补丁和 APK 可恢复地保存在外层 `artifacts/experiments/cleanmode-r6-ui`，不作为最终测试包。
+
+重新核对 38.8.0 的编译布局后，纠正此前“滑出容器是共享祖先”的判断：`C212407ub` 创建的弹幕外层 `l` 只包含弹幕布局 `m`，其他 widget 根和 DrawChildOptFrameLayout 是兄弟节点。`CleanModePresenter.i0` 已显式支持用白名单保留 `l`；`CleanModeServiceImpl.isCleanModeOn` 也专门排除这个原生弹幕资源 ID 后再判断清屏状态。旧方案生成的任意 renderer ID 没有这一状态语义。
+
+新 `DanmakuCleanModeHooker` 在原生服务接收命令之前补齐弹幕策略，覆盖两个 `toggleCleanMode` 重载和 `toggleCleanModeInVH`。播放、暂停、退出和 inverse 命令均使用同一个原生容器策略；追加前检查已有白名单，避免重复 ID 干扰宿主清屏判断。宿主保存并重放 command 引用，因此后创建或复用的 ViewHolder 不再依赖模块登记视图的时机。
+
+资源 ID 从宿主自身 `lpp_play_control` 命令工厂取得，不固定 38.8.0 数字、混淆类名或方法名。DexKit 通过 caller 字符串、命令构造器与白名单追加调用定位工厂，并要求结果只有一个有效资源 ID。38.8.0 的工厂仅创建命令、填写白名单和 autoQuit，没有发出清屏事件；其静态合成参数未使用。其他版本如果匹配不唯一、工厂无法调用或策略内容变化，会记录错误并跳过弹幕策略，不使用硬编码回退。弹幕策略映射失败与核心清屏映射失败分别处理。
+
+删除旧 DanmakuViewHooker、生成视图 ID、弱引用集合、附着监听和 Presenter 祖先拆分；对应两组适配器与扫描器一并移除。protobuf 的旧字段 53/54 及其名称设为 reserved，原生策略在 NativeCleanMode 的新字段 8–11 缓存。模块版本升为 `0.14.0-cleanmode-r6` / 1402，使旧 HookInfo 重新解析。
+
+这是原生命令/状态层适配，不是直接改视频业务数据。全屏窗口和主页栏的既有兼容代码仍存在，不能据此宣称整个清爽模式已完全摆脱 UI 层或保证所有版本一致。独立滚动实验 `draw_child_with_danmaku` 和部分 dislike 路径可直接调用 presenter、绕过服务，需通过实机覆盖快速滑动、取消滑动、长按与返回等边界后再决定是否需要其他状态入口。
+
+r6 实机验收重点：抖音自身弹幕开关打开时，首个视频、播放/暂停/继续、切换视频、关闭评论、返回页面及手动清屏均能看到弹幕；关闭抖音弹幕开关后仍保持关闭。还需确认其他主页控件继续隐藏，弹幕发送可点击，快速滑动及取消滑动后能恢复。本轮没有设备运行证据，静态核对与 JVM 测试不等同于实机通过。
+
+r6 验证：Kotlin 格式检查、8 项播放状态测试、5 项原生策略校验测试、Release 构建及 lintVital 全部通过；最终源码独立复核无新可行动发现。KSP 注册表包含 DanmakuCleanModeHooker，源码没有旧弹幕视图适配引用，`git diff --check` 通过，daemon JVM criteria 已恢复。APK versionCode 为 1402，v2 签名校验通过，证书与 r5 相同；最终测试包为外层 `artifacts/DouyinEnhancer_0.14.0-cleanmode-r6.apk`，SHA-256 为 `d3222cac6de7d9b0b1971c668db727db8976f4fae30f285dd11c2b04d66d5c1e`。这个包采用原生命令策略，与实验归档里的同版本 UI 实验包不同。安装后强制停止并重新打开抖音，以重建映射并加载新 Hook。
+
+2026-10-07：用户反馈 r6 测试“没什么问题”，确认原生命令策略方案在其当前设备上可用。该反馈不等同于全部宿主版本或上述每个边界均已验收。
+
 ## 首轮构建与测试
 
 使用项目的 Java 21、Gradle 9.4.1 和现有依赖。普通环境可通过 Gradle Wrapper 构建：
