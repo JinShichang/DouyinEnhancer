@@ -96,4 +96,56 @@ internal object NativeCleanModeSymbols {
             this.content = field { name = content.name }
         }
     }
+
+    /** Reuse the host's command policy instead of assigning IDs to rendered views. */
+    fun resolveDanmakuPolicy(bridge: DexKitBridge): Configs.NativeCleanMode {
+        val command = bridge.findClass {
+            matcher { usingStrings("stateOn: ", ", autoQuit: ", ", seekbar:") }
+        }.single()
+        val append = bridge.findMethod {
+            searchClasses = listOf(command)
+            matcher {
+                modifiers = Modifier.PUBLIC
+                paramTypes("java.util.List")
+                returnType = "void"
+            }
+        }.single()
+        val whiteList = bridge.findField {
+            searchClasses = listOf(command)
+            matcher { type = "java.util.List" }
+        }.single()
+        val factory = bridge.findMethod {
+            matcher {
+                modifiers = Modifier.PUBLIC or Modifier.STATIC
+                paramCount = 1
+                returnType = "java.lang.Object"
+                usingStrings("lpp_play_control")
+                invokeMethods {
+                    add { descriptor = "L${command.name.replace('.', '/')};-><init>(ZLjava/lang/String;)V" }
+                    add { descriptor = append.descriptor }
+                }
+            }
+        }.single()
+        return nativeCleanMode {
+            danmakuPolicyClass = class_ { name = factory.declaredClassName }
+            danmakuPolicyFactory = method {
+                name = factory.name
+                parameters = MethodKt.parameters { values.addAll(factory.paramTypeNames) }
+            }
+            this.whiteList = field { name = whiteList.name }
+            appendWhiteList = method {
+                name = append.name
+                parameters = MethodKt.parameters { values.addAll(append.paramTypeNames) }
+            }
+        }
+    }
+
+    /** Fail closed if the native template changes to preserve unrelated widgets. */
+    fun danmakuWhiteList(value: List<*>): List<Int> {
+        val id = value.singleOrNull() as? Int
+        check(id != null && id > 0x00ffffff && (id ushr 16 and 0xff) != 0) {
+            "Native danmaku policy must contain exactly one resource ID"
+        }
+        return listOf(id)
+    }
 }

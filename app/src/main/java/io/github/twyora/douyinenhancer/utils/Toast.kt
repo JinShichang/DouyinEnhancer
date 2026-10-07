@@ -1,15 +1,16 @@
 package io.github.twyora.douyinenhancer.utils
 
-import android.app.Activity
+import android.content.Context
+import android.os.Handler
 import android.widget.Toast
 import androidx.annotation.StringRes
 
-fun Activity.toast(text: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
-    this.runOnUiThread {
+fun Context.toast(text: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+    Handler(mainLooper).post {
         Toast.makeText(this, text, duration).show()
     }
 }
 
-fun Activity.toast(@StringRes resId: Int, duration: Int = Toast.LENGTH_SHORT) {
+fun Context.toast(@StringRes resId: Int, duration: Int = Toast.LENGTH_SHORT) {
     toast(this.getString(resId), duration)
 }

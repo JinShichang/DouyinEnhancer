@@ -35,6 +35,7 @@
     <string name="pref_ui_keep_danmaku_visible_summary">Keep danmaku in the native clear-screen whitelist; enabled automatically for Clean Mode</string>
     <string name="recommended_feed_filter_main_switch_title">Main switch</string>
     <string name="recommended_feed_filter_main_switch_summary">Turn on to use recommended feed filtering features</string>
+    <string name="recommended_feed_filter_block_followed_author_title">Hide content from followed creators</string>
     <string name="recommended_feed_filter_block_ad_title">✦ Block ads</string>
     <string name="recommended_feed_filter_block_ad_summary">Attempt to block ads in the feed (Experimental)</string>
     <string name="recommended_feed_filter_block_ecom_aweme_title">✦ Block e-commerce promotions</string>
@@ -129,14 +130,27 @@
     <string name="playback_component_block_ai_co_creators_three">✦ AI Duet Creator Avatar</string>
     <string name="playback_component_block_aigc_cocreate_status_title">✦ AI Co-Creation Tag</string>
 
-    <string name="bottom_tab_block_dialog_title">Hide Bottom Navigation Items</string>
-    <string name="bottom_tab_main_switch_title">Master Switch</string>
+    <string name="bottom_tab_block_dialog_title">Hide Navigation Items</string>
+    <string name="bottom_tab_main_switch_title">Bottom Navigation Main Switch</string>
     <string name="bottom_tab_main_switch_summary">Enable to configure hiding of bottom navigation entries</string>
     <string name="bottom_tab_hide_homepage_home">Home</string>
     <string name="bottom_tab_hide_homepage_mall">Mall</string>
     <string name="bottom_tab_hide_homepage_publish">Publish Button</string>
     <string name="bottom_tab_hide_homepage_notification">Messages</string>
     <string name="bottom_tab_hide_homepage_profile">Profile</string>
+    <string name="top_tab_main_switch_title">Top Navigation Main Switch</string>
+    <string name="top_tab_main_switch_summary">Enable to configure hiding of top navigation entries</string>
+    <string name="top_tab_hide_homepage_follow">Follow</string>
+    <string name="top_tab_hide_homepage_familiar">Friends</string>
+    <string name="top_tab_hide_homepage_groupon">Deals</string>
+    <string name="top_tab_hide_homepage_hot_container">For You</string>
+    <string name="top_tab_hide_homepage_nearby">Nearby</string>
+    <string name="top_tab_hide_homepage_mediumvideo">Featured</string>
+    <string name="top_tab_hide_homepage_pad_hot">Trending</string>
+    <string name="top_tab_hide_homepage_hangout">Moments</string>
+    <string name="top_tab_hide_homepage_tablive">Live</string>
+
+    <string name="home_tab_block_summary">Hide navigation entries on the top or bottom bar of the home page</string>
 
     <string name="pref_category_backup">Backup &amp; Restore</string>
     <string name="pref_backup_export_title">Export Config</string>
@@ -190,7 +204,7 @@
     <string name="pref_about_build_time_title">Build Time</string>
     <string name="unknown">Unknown</string>
     <string name="pref_about_back_then_title">Back Then🎵</string>
-    <string name="pref_about_back_then_summary">五星红旗迎风飘扬 胜利歌声多么响亮\n歌唱我们亲爱的祖国 从今走向繁荣富强🎵</string>
+    <string name="pref_about_back_then_summary">一叶轻船\n一双桨悠懒\n一绵江风微拂素罗衫\n渔火点点聚散\n欸乃声声浅淡\n天近晚\n炊烟袅飘沿斑🎵</string>
 
     <string name="success">Success</string>
     <string name="failed">Failed</string>

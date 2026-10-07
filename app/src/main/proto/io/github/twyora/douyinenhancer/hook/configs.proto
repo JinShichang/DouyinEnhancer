@@ -152,6 +152,7 @@ message Aweme {
   optional Method get_download_status = 16;
   optional Field aid = 17;
   optional Field status = 18;
+  optional Method get_follow_status = 19;
 }
 
 message AwemeStatus {
@@ -360,14 +361,6 @@ message VideoEvent {
   reserved 2;
 }
 
-message CleanModePresenter {
-  optional Class class = 1;
-  optional Method enter_clean_mode = 2;
-  optional Method set_visibility = 3 [deprecated = true];
-  optional Method handle_view = 4;
-  optional Method collect_hidden_views = 5;
-}
-
 message NativeCleanMode {
   optional Class service_class = 1;
   optional Class command_class = 2;
@@ -376,13 +369,10 @@ message NativeCleanMode {
   optional Method inverse = 5;
   optional Field auto_quit = 6;
   optional Field content = 7;
-}
-
-message DanmakuView {
-  optional Class class = 1;
-  optional Method on_attached_to_window = 2;
-  optional Class container_class = 3;
-  optional Method create_container = 4;
+  optional Class danmaku_policy_class = 8;
+  optional Method danmaku_policy_factory = 9;
+  optional Field white_list = 10;
+  optional Method append_white_list = 11;
 }
 
 message CleanModeChrome {
@@ -422,17 +412,19 @@ message AbsTask {
   optional Method get_target_file_paths = 2;
 }
 
-message TabNode {
+// begin IHomeTabDataSource implementers
+message HomeTabDataSourceServer {
   optional Class class = 1;
-  optional Field tab_id = 2;
-  optional Field children = 3;
+  optional Method get_showing_bottom_tab_ids = 2;
+  optional Method get_showing_top_tab_ids = 3;
 }
 
-message MPFBottomTabComponent {
+message HomeTabDataSourceDefault {
   optional Class class = 1;
-  optional Field tab_root = 2;
-  optional Method build_tab_views = 3;
+  optional Method get_showing_bottom_tab_ids = 2;
+  optional Method get_showing_top_tab_ids = 3;
 }
+// end IHomeTabDataSource implementers
 
 message HookInfo {
   uint64 last_update_time = 1;
@@ -479,8 +471,6 @@ message HookInfo {
   optional ListenAwemeFilter listen_aweme_filter = 50;
   optional BaseListFragmentPanel base_list_fragment_panel = 51;
   optional VideoEvent video_event = 52;
-  optional CleanModePresenter clean_mode_presenter = 53;
-  optional DanmakuView danmaku_view = 54;
   optional FluxComponentId flux_component_id = 56;
   optional FluxComponentDataAction flux_component_data_action = 57;
   optional Heif heif = 58;
@@ -489,10 +479,11 @@ message HookInfo {
   optional StoryServiceImpl story_service_impl = 61;
   optional AbsTask abs_task = 62;
   optional VideoPlayerStatus video_player_status = 63;
-  optional TabNode tab_node = 64;
-  optional MPFBottomTabComponent mpf_bottom_tab_component = 65;
-  optional NativeCleanMode native_clean_mode = 66;
-  optional CleanModeChrome clean_mode_chrome = 67;
+  optional HomeTabDataSourceServer home_tab_data_source_server = 66;
+  optional HomeTabDataSourceDefault home_tab_data_source_default = 67;
+  optional NativeCleanMode native_clean_mode = 68;
+  optional CleanModeChrome clean_mode_chrome = 69;
 
-  reserved 13, 18, 32, 35, 36, 38, 39, 40, 55;
+  reserved 13, 18, 32, 35, 36, 38, 39, 40, 53, 54, 55, 64, 65;
+  reserved "clean_mode_presenter", "danmaku_view", "tab_node", "mpf_bottom_tab_component";
 }

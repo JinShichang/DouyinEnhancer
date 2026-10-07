@@ -15,6 +15,7 @@ class RecommendedFeedFilterConfigProvider(
 ) : AbsConfigProvider(kvConfig, ruleContextProvider) {
     val mainSwitch = configItem(MAIN_SWITCH, false)
 
+    val blockFollowedAuthor = configItem(BLOCK_FOLLOWED_AUTHOR, false)
     val blockAd = configItem(BLOCK_AD, false, RuleGate(HiddenFeatureEnabledRule, ConfigValueMode.FORCE_DEFAULT, ConfigStateMode.HIDDEN))
     val blockEcom =
         configItem(BLOCK_ECOM, false, RuleGate(HiddenFeatureEnabledRule, ConfigValueMode.FORCE_DEFAULT, ConfigStateMode.HIDDEN))
@@ -46,6 +47,7 @@ class RecommendedFeedFilterConfigProvider(
 
     companion object {
         const val MAIN_SWITCH = "recommended_feed_filter_main_switch"
+        const val BLOCK_FOLLOWED_AUTHOR = "recommended_feed_filter_block_followed_author"
         const val BLOCK_AD = "recommended_feed_filter_block_ad"
         const val BLOCK_ECOM = "recommended_feed_filter_block_ecom_aweme"
         const val BLOCK_GROUPON = "recommended_feed_filter_block_groupon_large_card"

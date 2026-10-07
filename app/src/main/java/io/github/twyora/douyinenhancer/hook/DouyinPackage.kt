@@ -119,18 +119,16 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     val baseListFragmentPanel = BaseListFragmentPanelModule(hookInfo.baseListFragmentPanel, classLoader)
     val videoPlayerStatus = VideoPlayerStatusModule(hookInfo.videoPlayerStatus, classLoader)
     val videoEvent = VideoEventModule(hookInfo.videoEvent, classLoader)
-    val cleanModePresenter = CleanModePresenterModule(hookInfo.cleanModePresenter, classLoader)
     val cleanModeChrome = CleanModeChromeModule(hookInfo.cleanModeChrome, classLoader)
     val nativeCleanMode = NativeCleanModeModule(hookInfo.nativeCleanMode, classLoader)
-    val danmakuView = DanmakuViewModule(hookInfo.danmakuView, classLoader)
     val fluxComponentId = FluxComponentIdModule(hookInfo.fluxComponentId, classLoader)
     val fluxComponentDataAction = FluxComponentDataActionModule(hookInfo.fluxComponentDataAction, classLoader)
     val heif = HeifModule(hookInfo.heif, classLoader)
     val heifData = HeifDataModule(hookInfo.heifData, classLoader)
     val closeableReference = CloseableReferenceModule(hookInfo.closeableReference, classLoader)
     val storyServiceImpl = StoryServiceImplModule(hookInfo.storyServiceImpl, classLoader)
-    val tabNode = TabNodeModule(hookInfo.tabNode, classLoader)
-    val mpfBottomTabComponent = MPFBottomTabComponentModule(hookInfo.mpfBottomTabComponent, classLoader)
+    val homeTabDataSourceServer = HomeTabDataSourceServerModule(hookInfo.homeTabDataSourceServer, classLoader)
+    val homeTabDataSourceDefault = HomeTabDataSourceDefaultModule(hookInfo.homeTabDataSourceDefault, classLoader)
 
     class CommentImageStructModule internal constructor(
         private val configs: Configs.CommentImageStruct,
@@ -394,6 +392,12 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun nickname() = Field(configs.nickname.nameOrNull)
 
         fun uid() = Field(configs.uid.nameOrNull)
+
+        companion object {
+            const val FOLLOW_STATUS_UNFOLLOWED = 0
+//            const val FOLLOW_STATUS_FOLLOWING = 1
+//            const val FOLLOW_STATUS_MUTUAL_FOLLOW = 2
+        }
     }
 
     class AwemeModule internal constructor(private val configs: Configs.Aweme, private val classLoader: ClassLoader) {
@@ -458,6 +462,11 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun aid() = Field(configs.aid.nameOrNull)
 
         fun status() = Field(configs.status.nameOrNull)
+
+        fun getFollowStatus() = Method(
+            configs.getFollowStatus.nameOrNull,
+            configs.getFollowStatus.parameters.valuesListOrNull
+        )
     }
 
     class AwemeStatusModule internal constructor(private val configs: Configs.AwemeStatus, private val classLoader: ClassLoader) {
@@ -940,12 +949,17 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
     class NativeCleanModeModule internal constructor(private val configs: Configs.NativeCleanMode, private val classLoader: ClassLoader) {
         val serviceClass by weak { configs.serviceClass.nameOrNull?.toClass(classLoader) }
         val commandClass by weak { configs.commandClass.nameOrNull?.toClass(classLoader) }
+        val danmakuPolicyClass by weak { configs.danmakuPolicyClass.nameOrNull?.toClass(classLoader) }
 
         fun serviceInstance() = Method(configs.serviceInstance.nameOrNull, emptyList())
         fun toggle() = Method(configs.toggle.nameOrNull, configs.toggle.parameters.valuesListOrNull)
         fun inverse() = Method(configs.inverse.nameOrNull, emptyList())
         fun autoQuit() = Field(configs.autoQuit.nameOrNull)
         fun content() = Field(configs.content.nameOrNull)
+        fun danmakuPolicyFactory() =
+            Method(configs.danmakuPolicyFactory.nameOrNull, configs.danmakuPolicyFactory.parameters.valuesListOrNull)
+        fun whiteList() = Field(configs.whiteList.nameOrNull)
+        fun appendWhiteList() = Method(configs.appendWhiteList.nameOrNull, configs.appendWhiteList.parameters.valuesListOrNull)
     }
 
     class CleanModeChromeModule internal constructor(private val configs: Configs.CleanModeChrome, private val classLoader: ClassLoader) {
@@ -958,47 +972,6 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         fun uiServiceInstance() = Field(configs.uiServiceInstance.nameOrNull)
         fun topContainerId() = Method(configs.topContainerId.nameOrNull, emptyList())
         fun topShadowId() = Method(configs.topShadowId.nameOrNull, emptyList())
-    }
-
-    class CleanModePresenterModule internal constructor(
-        private val configs: Configs.CleanModePresenter,
-        private val classLoader: ClassLoader
-    ) {
-        val selfClass by weak {
-            configs.class_.nameOrNull?.toClass(classLoader)
-        }
-
-        fun enterCleanMode() = Method(
-            configs.enterCleanMode.nameOrNull,
-            configs.enterCleanMode.parameters.valuesListOrNull
-        )
-
-        fun handleView() = Method(configs.handleView.nameOrNull, configs.handleView.parameters.valuesListOrNull)
-
-        fun collectHiddenViews() = Method(
-            configs.collectHiddenViews.nameOrNull,
-            configs.collectHiddenViews.parameters.valuesListOrNull
-        )
-    }
-
-    class DanmakuViewModule internal constructor(private val configs: Configs.DanmakuView, private val classLoader: ClassLoader) {
-        val selfClass by weak {
-            configs.class_.nameOrNull?.toClass(classLoader)
-        }
-
-        fun onAttachedToWindow() = Method(
-            configs.onAttachedToWindow.nameOrNull,
-            configs.onAttachedToWindow.parameters.valuesListOrNull
-        )
-
-        val containerClass by weak {
-            configs.containerClass.nameOrNull?.toClass(classLoader)
-        }
-
-        fun createContainer() = Method(
-            configs.createContainer.nameOrNull,
-            configs.createContainer.parameters.valuesListOrNull
-        )
     }
 
     class HeifModule internal constructor(private val configs: Configs.Heif, private val classLoader: ClassLoader) {
@@ -1053,37 +1026,60 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
         )
     }
 
-    class TabNodeModule internal constructor(private val configs: Configs.TabNode, private val classLoader: ClassLoader) {
-        val selfClass by weak {
-            configs.class_.nameOrNull?.toClass(classLoader)
-        }
-
-        fun tabId() = Field(configs.tabId.nameOrNull)
-
-        fun children() = Field(configs.children.nameOrNull)
-
+    class TabNodeModule {
         companion object {
             const val TAB_ID_HOMEPAGE_HOME = "homepage_home"
             const val TAB_ID_HOMEPAGE_MALL = "homepage_mall"
             const val TAB_ID_HOMEPAGE_PUBLISH = "homepage_publish"
             const val TAB_ID_HOMEPAGE_NOTIFICATION = "homepage_notification"
             const val TAB_ID_HOMEPAGE_PROFILE = "homepage_profile"
+            const val TAB_ID_HOMEPAGE_MEDIUMVIDEO = "homepage_mediumvideo"
+            const val TAB_ID_HOMEPAGE_NEARBY = "homepage_nearby"
+            const val TAB_ID_HOMEPAGE_HANGOUT = "homepage_hangout"
+            const val TAB_ID_HOMEPAGE_PAD_HOT = "homepage_pad_hot"
+            const val TAB_ID_HOMEPAGE_TABLIVE = "homepage_tablive"
+            const val TAB_ID_HOMEPAGE_GROUPON = "homepage_groupon"
+            const val TAB_ID_HOMEPAGE_FAMILIAR = "homepage_familiar"
+            const val TAB_ID_HOMEPAGE_FOLLOW = "homepage_follow"
+            const val TAB_ID_HOMEPAGE_HOT_CONTAINER = "homepage_hot_container"
         }
     }
 
-    class MPFBottomTabComponentModule internal constructor(
-        private val configs: Configs.MPFBottomTabComponent,
+    class HomeTabDataSourceServerModule internal constructor(
+        private val configs: Configs.HomeTabDataSourceServer,
         private val classLoader: ClassLoader
     ) {
         val selfClass by weak {
             configs.class_.nameOrNull?.toClass(classLoader)
         }
 
-        fun tabRoot() = Field(configs.tabRoot.nameOrNull)
+        fun getShowingBottomTabIds() = Method(
+            configs.getShowingBottomTabIds.nameOrNull,
+            configs.getShowingBottomTabIds.parameters.valuesListOrNull
+        )
 
-        fun buildTabViews() = Method(
-            configs.buildTabViews.nameOrNull,
-            configs.buildTabViews.parameters.valuesListOrNull
+        fun getShowingTopTabIds() = Method(
+            configs.getShowingTopTabIds.nameOrNull,
+            configs.getShowingTopTabIds.parameters.valuesListOrNull
+        )
+    }
+
+    class HomeTabDataSourceDefaultModule internal constructor(
+        private val configs: Configs.HomeTabDataSourceDefault,
+        private val classLoader: ClassLoader
+    ) {
+        val selfClass by weak {
+            configs.class_.nameOrNull?.toClass(classLoader)
+        }
+
+        fun getShowingBottomTabIds() = Method(
+            configs.getShowingBottomTabIds.nameOrNull,
+            configs.getShowingBottomTabIds.parameters.valuesListOrNull
+        )
+
+        fun getShowingTopTabIds() = Method(
+            configs.getShowingTopTabIds.nameOrNull,
+            configs.getShowingTopTabIds.parameters.valuesListOrNull
         )
     }
 
@@ -1095,6 +1091,7 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
 
         @Volatile
         lateinit var instance: DouyinPackage
+            private set
 
         fun init(classLoader: ClassLoader, context: Context) {
             instance = DouyinPackage(classLoader, context)
@@ -2107,6 +2104,9 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                     status = field {
                         name = "status"
+                    }
+                    getFollowStatus = method {
+                        name = "getFollowStatus"
                     }
                 }
 
@@ -3340,92 +3340,17 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                 }
 
                 runCatching {
+                    nativeCleanMode = nativeCleanMode.toBuilder()
+                        .mergeFrom(NativeCleanModeSymbols.resolveDanmakuPolicy(bridge))
+                        .build()
+                }.onFailure {
+                    YLog.error("$TAG: failed to resolve native danmaku policy", it)
+                }
+
+                runCatching {
                     cleanModeChrome = NativeCleanModeChromeSymbols.resolve(bridge)
                 }.onFailure {
                     YLog.error("$TAG: failed to resolve clean mode chrome protection", it)
-                }
-
-                cleanModePresenter = cleanModePresenter {
-                    runCatching {
-                        val cleanModePresenterClassData = bridge.getClassData(
-                            "com.ss.android.ugc.aweme.feed.plato.business.contentconsumption.cleanmode.CleanModePresenter"
-                        )
-                        val enterCleanModeMethodData = cleanModePresenterClassData?.let {
-                            bridge.findMethod {
-                                searchClasses = listOf(it)
-                                matcher {
-                                    // in some of the newer versions, the parameter order has changed
-                                    paramCount = 5
-                                    invokeMethods {
-                                        add {
-                                            descriptor =
-                                                "Lcom/ss/android/ugc/aweme/feed/adapter/IFeedViewHolder;->blockCommonCleanModeEvent(Z)Z"
-                                        }
-                                    }
-                                }
-                            }.singleOrNull()
-                        }
-                        if (cleanModePresenterClassData == null ||
-                            enterCleanModeMethodData == null
-                        ) {
-                            YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
-                            return@cleanModePresenter
-                        }
-
-                        class_ = class_ {
-                            name = cleanModePresenterClassData.name
-                        }
-                        enterCleanMode = method {
-                            name = enterCleanModeMethodData.methodName
-                            parameters = MethodKt.parameters {
-                                values.clear()
-                                values.addAll(enterCleanModeMethodData.paramTypeNames)
-                            }
-                        }
-                        val handleViewMethod = bridge.findMethod {
-                            searchClasses = listOf(cleanModePresenterClassData)
-                            matcher {
-                                paramTypes("android.view.View", "int", "int", "boolean")
-                                usingStrings("no VisibilityManager for view: ")
-                            }
-                        }.single()
-                        handleView = method {
-                            name = handleViewMethod.name
-                            parameters = MethodKt.parameters { values.addAll(handleViewMethod.paramTypeNames) }
-                        }
-                        val collectHiddenMethod = bridge.findMethod {
-                            searchClasses = listOf(cleanModePresenterClassData)
-                            matcher {
-                                modifiers = Modifier.PUBLIC or Modifier.STATIC
-                                paramTypes("android.view.View", "java.util.List")
-                                returnType = "java.util.List"
-                            }
-                        }.single()
-                        collectHiddenViews = method {
-                            name = collectHiddenMethod.name
-                            parameters = MethodKt.parameters { values.addAll(collectHiddenMethod.paramTypeNames) }
-                        }
-                    }.onFailure {
-                        YLog.error(populateFailedMsg.format(TAG), it)
-                    }
-                }
-
-                danmakuView = danmakuView {
-                    class_ = class_ {
-                        name = "com.bytedance.common.ultra.danmaku.view.DanmakuView"
-                    }
-                    onAttachedToWindow = method {
-                        name = "onAttachedToWindow"
-                    }
-                    containerClass = class_ {
-                        name = "com.ss.android.ugc.aweme.feed.danmaku.ultra.DanmakuModule"
-                    }
-                    createContainer = method {
-                        name = "onCreateView"
-                        parameters = MethodKt.parameters {
-                            values.addAll(listOf("android.content.Context", "android.view.ViewGroup"))
-                        }
-                    }
                 }
 
                 fluxComponentId = fluxComponentId {
@@ -3850,103 +3775,177 @@ class DouyinPackage(classLoader: ClassLoader, context: Context) {
                     }
                 }
 
-                tabNode = tabNode {
+                homeTabDataSourceServer = homeTabDataSourceServer {
                     runCatching {
-                        val tabNodeClassData = bridge.findClass {
+                        val homeTabDataSourceServerClassData = bridge.findClass {
                             matcher {
                                 usingStrings {
-                                    add("TabNode")
-                                    add("tabId")
-                                    add("currentNode")
+                                    add("HomeTabDataSourceServer", StringMatchType.Equals)
+                                    add("buildShowingTopTabIds")
                                 }
                             }
                         }.singleOrNull()
-                        val tabIdFieldData = tabNodeClassData?.let {
-                            bridge.findField {
+                        val getShowingTopTabIdsMethodData = homeTabDataSourceServerClassData?.let {
+                            bridge.findMethod {
                                 searchClasses = listOf(it)
                                 matcher {
-                                    modifiers = Modifier.PUBLIC
-                                    type = "java.lang.String"
+                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
+                                    returnType = "java.util.List"
+                                    usingStrings {
+                                        add("buildShowingTopTabIds")
+                                    }
+                                    invokeMethods {
+                                        add {
+                                            modifiers = Modifier.PUBLIC
+                                            returnType = "boolean"
+                                            usingFields {
+                                                add {
+                                                    annotations {
+                                                        add {
+                                                            type = "com.google.gson.annotations.SerializedName"
+                                                            addElement {
+                                                                name = "value"
+                                                                stringValue("is_show", StringMatchType.Equals)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            declaredClass {
+                                                fields {
+                                                    add {
+                                                        annotations {
+                                                            add {
+                                                                type = "com.google.gson.annotations.SerializedName"
+                                                                addElement {
+                                                                    name = "value"
+                                                                    stringValue("movable", StringMatchType.Equals)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    add {
+                                                        annotations {
+                                                            add {
+                                                                type = "com.google.gson.annotations.SerializedName"
+                                                                addElement {
+                                                                    name = "value"
+                                                                    stringValue("drag_type", StringMatchType.Equals)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    add {
+                                                        annotations {
+                                                            add {
+                                                                type = "com.google.gson.annotations.SerializedName"
+                                                                addElement {
+                                                                    name = "value"
+                                                                    stringValue("extra", StringMatchType.Equals)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }.singleOrNull()
                         }
-                        val childrenFieldData = tabNodeClassData?.let {
-                            bridge.findField {
+                        val getShowingBottomTabIdsMethodData = homeTabDataSourceServerClassData?.let {
+                            bridge.findMethod {
                                 searchClasses = listOf(it)
                                 matcher {
-                                    modifiers = Modifier.PUBLIC
-                                    type = "java.util.List"
+                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
+                                    returnType = "java.util.List"
+                                    usingStrings {
+                                        add("buildShowingTopTabIds")
+                                    }
                                 }
-                            }.singleOrNull()
+                            }.singleOrNull { methodData ->
+                                methodData.name != getShowingTopTabIdsMethodData?.name
+                            }
                         }
-                        if (tabNodeClassData == null || tabIdFieldData == null || childrenFieldData == null) {
+                        if (homeTabDataSourceServerClassData == null || getShowingBottomTabIdsMethodData == null ||
+                            getShowingTopTabIdsMethodData == null
+                        ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
-                            return@tabNode
+                            return@homeTabDataSourceServer
                         }
                         class_ = class_ {
-                            name = tabNodeClassData.name
+                            name = homeTabDataSourceServerClassData.name
                         }
-                        tabId = field {
-                            name = tabIdFieldData.name
+                        getShowingBottomTabIds = method {
+                            name = getShowingBottomTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingBottomTabIdsMethodData.paramTypeNames)
+                            }
                         }
-                        children = field {
-                            name = childrenFieldData.name
+                        getShowingTopTabIds = method {
+                            name = getShowingTopTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingTopTabIdsMethodData.paramTypeNames)
+                            }
                         }
                     }.onFailure {
                         YLog.error(populateFailedMsg.format(TAG), it)
                     }
                 }
 
-                mpfBottomTabComponent = mPFBottomTabComponent {
+                homeTabDataSourceDefault = homeTabDataSourceDefault {
                     runCatching {
-                        val mpfBottomTabComponentClassData = bridge.findClass {
+                        val homeTabDataSourceDefaultClassData = bridge.findClass {
                             matcher {
                                 usingStrings {
-                                    add("MPFBottomTabComponent", matchType = StringMatchType.Equals)
-                                    add("onViewCreate")
+                                    add("HomeTabDataSourceDefault", StringMatchType.Equals)
+                                    add("buildEditedTopTabs")
                                 }
                             }
                         }.singleOrNull()
-                        val tabRootFieldData = mpfBottomTabComponentClassData?.let {
-                            bridge.findField {
-                                searchClasses = listOf(it)
-                                matcher {
-                                    this@apply.tabNode.class_.nameOrNull?.let { tabNodeClassName ->
-                                        type = tabNodeClassName
-                                    }
-                                }
-                            }.singleOrNull()
-                        }
-                        val buildTabViewsMethodData = mpfBottomTabComponentClassData?.let {
+                        val getShowingTopTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
                             bridge.findMethod {
                                 searchClasses = listOf(it)
                                 matcher {
-                                    modifiers = Modifier.PUBLIC or Modifier.FINAL
-                                    params {
-                                        add("boolean")
-                                    }
-                                    returnType = "void"
-                                    usingStrings {
-                                        add("buildTabViews")
+                                    this@apply.homeTabDataSourceServer.getShowingTopTabIds.nameOrNull?.let { methodName ->
+                                        name = methodName
                                     }
                                 }
                             }.singleOrNull()
                         }
-                        if (mpfBottomTabComponentClassData == null || tabRootFieldData == null || buildTabViewsMethodData == null) {
+                        val getShowingBottomTabIdsMethodData = homeTabDataSourceDefaultClassData?.let {
+                            bridge.findMethod {
+                                searchClasses = listOf(it)
+                                matcher {
+                                    this@apply.homeTabDataSourceServer.getShowingBottomTabIds.nameOrNull?.let { methodName ->
+                                        name = methodName
+                                    }
+                                }
+                            }.singleOrNull()
+                        }
+                        if (homeTabDataSourceDefaultClassData == null || getShowingBottomTabIdsMethodData == null ||
+                            getShowingTopTabIdsMethodData == null
+                        ) {
                             YLog.error(symbolNotFoundMsg.format(TAG, this::class.java.enclosingClass?.simpleName))
-                            return@mPFBottomTabComponent
+                            return@homeTabDataSourceDefault
                         }
                         class_ = class_ {
-                            name = mpfBottomTabComponentClassData.name
+                            name = homeTabDataSourceDefaultClassData.name
                         }
-                        tabRoot = field {
-                            name = tabRootFieldData.name
-                        }
-                        buildTabViews = method {
-                            name = buildTabViewsMethodData.name
+                        getShowingBottomTabIds = method {
+                            name = getShowingBottomTabIdsMethodData.name
                             parameters = MethodKt.parameters {
                                 values.clear()
-                                values.addAll(buildTabViewsMethodData.paramTypeNames)
+                                values.addAll(getShowingBottomTabIdsMethodData.paramTypeNames)
+                            }
+                        }
+                        getShowingTopTabIds = method {
+                            name = getShowingTopTabIdsMethodData.name
+                            parameters = MethodKt.parameters {
+                                values.clear()
+                                values.addAll(getShowingTopTabIdsMethodData.paramTypeNames)
                             }
                         }
                     }.onFailure {

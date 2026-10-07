@@ -21,6 +21,7 @@ import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.BuildConfig
 import io.github.twyora.douyinenhancer.R
+import io.github.twyora.douyinenhancer.bridge.ModuleApp
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
 import io.github.twyora.douyinenhancer.config.provider.ModuleConfigProvider
@@ -128,17 +129,17 @@ class SettingsDialog(context: Context) :
         @Deprecated("Deprecated in Java")
         override fun onPreferenceClick(preference: Preference?) = when (preference?.key) {
             "recommend_feed_filter" -> {
-                RecommendedFeedFilterDialog(context).show()
+                RecommendedFeedFilterDialog.show(context)
                 true
             }
 
             "playback_component_block" -> {
-                PlaybackComponentBlockDialog(context).show()
+                PlaybackComponentBlockDialog.show(context)
                 true
             }
 
             "bottom_tab_block" -> {
-                BottomTabBlockDialog.show(context)
+                HomeTabBlockDialog.show(context)
                 true
             }
 
@@ -146,12 +147,12 @@ class SettingsDialog(context: Context) :
                 if (!ConfigManager.misc.hiddenFeatureEnabled.value) {
                     if (++hiddenFeatureClickCount == HIDDEN_FEATURE_TRIGGER_CLICK_COUNT) {
                         ConfigManager.misc.hiddenFeatureEnabled.value = true
-                        activity.toast(R.string.pref_misc_enable_hidden_features_restart_required)
+                        context.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_restart_required))
                     } else if (hiddenFeatureClickCount >= HIDDEN_FEATURE_HINT_FROM_CLICK_COUNT) {
-                        activity.toast(R.string.pref_misc_enable_hidden_features_steps_remaining)
+                        context.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_steps_remaining))
                     }
                 } else {
-                    activity.toast(R.string.pref_misc_enable_hidden_features_already_enabled)
+                    context.toast(ModuleApp.instance.resources.getString(R.string.pref_misc_enable_hidden_features_already_enabled))
                 }
                 true
             }
@@ -162,7 +163,7 @@ class SettingsDialog(context: Context) :
 
             "invalid_hook_info" -> {
                 ConfigManager.module.hookInfoGeneration.value++
-                activity.toast(R.string.success)
+                context.toast(ModuleApp.instance.resources.getString(R.string.success))
                 true
             }
 
@@ -174,7 +175,7 @@ class SettingsDialog(context: Context) :
                     presetFile.writeText("")
                 }
                 ConfigManager.module.hookInfoGeneration.value++
-                activity.toast(R.string.success)
+                context.toast(ModuleApp.instance.resources.getString(R.string.success))
 
                 true
             }
@@ -237,15 +238,15 @@ class SettingsDialog(context: Context) :
                                     }
                                 }
                             }.onFailure {
-                                activity.toast(
-                                    activity.getString(
+                                context.toast(
+                                    ModuleApp.instance.resources.getString(
                                         R.string.config_export_failed,
                                         it.message ?: it.toString()
                                     )
                                 )
                                 YLog.error("$TAG: export config failed", it)
                             }.onSuccess {
-                                activity.toast(R.string.config_export_success)
+                                context.toast(ModuleApp.instance.resources.getString(R.string.config_export_success))
                             }
                         }
 
@@ -290,7 +291,7 @@ class SettingsDialog(context: Context) :
                                     "%02x".format(it)
                                 }
                                 if (checksum != expectedChecksum) {
-                                    throw IOException(context.getString(R.string.config_import_corrupted))
+                                    throw IOException(ModuleApp.instance.resources.getString(R.string.config_import_corrupted))
                                 }
 
                                 val settings = ConfigManager.settingsStorage
@@ -303,15 +304,15 @@ class SettingsDialog(context: Context) :
                                     importedSettings.close()
                                 }
                             }.onFailure {
-                                activity.toast(
-                                    activity.getString(
+                                context.toast(
+                                    ModuleApp.instance.resources.getString(
                                         R.string.config_import_failed,
                                         it.message ?: it.toString()
                                     )
                                 )
                                 YLog.error("$TAG: import config failed", it)
                             }.onSuccess {
-                                activity.toast(R.string.config_import_success)
+                                context.toast(ModuleApp.instance.resources.getString(R.string.config_import_success))
                             }
                             settingsKvaTemp.delete()
                             settingsKvbTemp.delete()
@@ -349,7 +350,7 @@ class SettingsDialog(context: Context) :
                                 )
                             }
                         ) {
-                            activity.toast(R.string.untrusted_obfuscation_map)
+                            context.toast(ModuleApp.instance.resources.getString(R.string.untrusted_obfuscation_map))
                         }
 
                         File(
@@ -360,15 +361,15 @@ class SettingsDialog(context: Context) :
                         }
                         ConfigManager.module.hookInfoGeneration.value++
                     }.onFailure {
-                        activity.toast(
-                            activity.getString(
+                        context.toast(
+                            ModuleApp.instance.resources.getString(
                                 R.string.import_failed,
                                 it.message ?: it.toString()
                             )
                         )
                         YLog.error("$TAG: load custom hook info failed", it)
                     }.onSuccess {
-                        activity.toast(R.string.import_success_restart_required)
+                        context.toast(ModuleApp.instance.resources.getString(R.string.import_success_restart_required))
                     }
                 }
 
@@ -387,9 +388,12 @@ class SettingsDialog(context: Context) :
             )
             intent.addCategory(Intent.CATEGORY_OPENABLE)
             runCatching {
-                startActivityForResult(Intent.createChooser(intent, context.getString(R.string.config_export_chooser)), EXPORT_CONFIG)
+                startActivityForResult(
+                    Intent.createChooser(intent, ModuleApp.instance.resources.getString(R.string.config_export_chooser)),
+                    EXPORT_CONFIG
+                )
             }.onFailure {
-                activity.toast(it.message ?: it.toString())
+                context.toast(it.message ?: it.toString())
             }
 
             return true
@@ -400,9 +404,12 @@ class SettingsDialog(context: Context) :
             intent.type = "application/zip"
             intent.addCategory(Intent.CATEGORY_OPENABLE)
             runCatching {
-                startActivityForResult(Intent.createChooser(intent, context.getString(R.string.config_import_chooser)), IMPORT_CONFIG)
+                startActivityForResult(
+                    Intent.createChooser(intent, ModuleApp.instance.resources.getString(R.string.config_import_chooser)),
+                    IMPORT_CONFIG
+                )
             }.onFailure {
-                activity.toast(it.message ?: it.toString())
+                context.toast(it.message ?: it.toString())
             }
 
             return true
@@ -414,18 +421,18 @@ class SettingsDialog(context: Context) :
             intent.addCategory(Intent.CATEGORY_OPENABLE)
             runCatching {
                 startActivityForResult(
-                    Intent.createChooser(intent, context.getString(R.string.load_custom_hook_info_chooser)),
+                    Intent.createChooser(intent, ModuleApp.instance.resources.getString(R.string.load_custom_hook_info_chooser)),
                     LOAD_CUSTOM_HOOK_INFO
                 )
             }.onFailure {
-                activity.toast(it.message ?: it.toString())
+                context.toast(it.message ?: it.toString())
             }
 
             return true
         }
 
         private fun checkUpdate() = scope.launch {
-            val latestReleaseURL = context.getString(R.string.latest_release_api_url)
+            val latestReleaseURL = ModuleApp.instance.resources.getString(R.string.latest_release_api_url)
             val latestReleaseJson = runCatching {
                 withContext(Dispatchers.IO) {
                     JSONObject(
@@ -446,7 +453,7 @@ class SettingsDialog(context: Context) :
                     summary = "${BuildConfig.VERSION_NAME} ($latestReleaseVer)"
                 }
                 findPreference("update")?.apply {
-                    title = context.getString(R.string.pref_about_update_available_title)
+                    title = ModuleApp.instance.resources.getString(R.string.pref_about_update_available_title)
                     summary = latestReleaseJson.optString("body").takeIf {
                         it.isNotBlank()
                     }?.let {
@@ -455,20 +462,20 @@ class SettingsDialog(context: Context) :
                         } else {
                             it
                         }
-                    } ?: context.getString(R.string.pref_about_update_available_summary)
+                    } ?: ModuleApp.instance.resources.getString(R.string.pref_about_update_available_summary)
                 }
                 val counter = ConfigManager.module.notifyUpdateCooldown.value
                 val newCounter =
                     (counter - 1 + ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD) % ModuleConfigProvider.NOTIFY_UPDATE_COOLDOWN_PERIOD
                 ConfigManager.module.notifyUpdateCooldown.value = newCounter
                 if (newCounter == 0) {
-                    activity.toast(R.string.notify_update_available)
+                    context.toast(ModuleApp.instance.resources.getString(R.string.notify_update_available))
                 }
             } else {
                 findPreference("update")?.apply {
-                    title = context.getString(R.string.pref_about_up_to_date_title)
+                    title = ModuleApp.instance.resources.getString(R.string.pref_about_up_to_date_title)
                     summary = latestReleaseJson.optString("body").ifEmpty {
-                        context.getString(R.string.pref_about_up_to_date_summary)
+                        ModuleApp.instance.resources.getString(R.string.pref_about_up_to_date_summary)
                     }
                 }
             }
@@ -510,9 +517,9 @@ class SettingsDialog(context: Context) :
                         return@after
                     }
                     view.findViewById<TextView>(android.R.id.title)
-                        ?.setTextColor(activity.resources.getColor(R.color.white))
+                        ?.setTextColor(ModuleApp.instance.resources.getColor(R.color.white))
                     view.findViewById<TextView>(android.R.id.summary)
-                        ?.setTextColor(activity.resources.getColor(R.color.white_50))
+                        ?.setTextColor(ModuleApp.instance.resources.getColor(R.color.white_50))
                 }
             }
         } else {
@@ -520,13 +527,13 @@ class SettingsDialog(context: Context) :
         }
 
         setView(prefsFragment.view)
-        setTitle(context.getString(R.string.settings_dialog_title))
-        setNegativeButton(context.getString(R.string.settings_dialog_back), null)
-        setPositiveButton(context.getString(R.string.settings_dialog_confirm_and_restart)) { _, _ ->
+        setTitle(ModuleApp.instance.resources.getString(R.string.settings_dialog_title))
+        setNegativeButton(ModuleApp.instance.resources.getString(R.string.settings_dialog_back), null)
+        setPositiveButton(ModuleApp.instance.resources.getString(R.string.settings_dialog_confirm_and_restart)) { _, _ ->
             restartApplication(activity)
         }
         setOnDismissListener {
-            activity.toast(R.string.restart_required)
+            context.toast(ModuleApp.instance.resources.getString(R.string.restart_required))
             activity.fragmentManager.beginTransaction().remove(prefsFragment).commitAllowingStateLoss()
             nightModeTextHookResult?.remove()
         }
@@ -543,12 +550,12 @@ class SettingsDialog(context: Context) :
         private const val LOAD_CUSTOM_HOOK_INFO = 2
 
         fun show(context: Context) {
-            if (VerifyDialog.shouldVerify()) {
+            if (VerifyDialog.shouldVerify(context)) {
                 YLog.info("$TAG: unverified version, redirecting to verify dialog")
                 VerifyDialog.show(context)
             } else {
                 runCatching {
-                    (context as? Activity)?.injectModuleAppResources()
+                    context.injectModuleAppResources()
                     SettingsDialog(context).show()
                 }.onFailure {
                     YLog.error("$TAG: failed to show settings dialog", it)
