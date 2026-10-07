@@ -1,6 +1,6 @@
 # Referenced from [devtron](https://github.com/devtron-labs/devtron/blob/6ab8595f053a331083d6f5e500527d930ddd8a0e/.github/ISSUE_TEMPLATE/bug.yaml)
 
-name: "Bug Report (English)"
+name: "🐛 Bug Report (English)"
 description: "Submit a bug report to help us improve"
 title: "Bug: "
 labels: [ "bug", "needs-triage" ]
