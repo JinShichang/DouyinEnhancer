@@ -1,0 +1,82 @@
+# Referenced from [devtron](https://github.com/devtron-labs/devtron/blob/6ab8595f053a331083d6f5e500527d930ddd8a0e/.github/ISSUE_TEMPLATE/bug.yaml)
+
+name: "🐛 Bug Report (English)"
+description: "Submit a bug report to help us improve"
+title: "Bug: "
+labels: [ "bug", "needs-triage" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out our bug report form 🙏
+  - type: textarea
+    id: description
+    validations:
+      required: true
+    attributes:
+      label: "📜 Description"
+      description: "A clear and concise description of what the bug is."
+  - type: textarea
+    id: steps-to-reproduce
+    validations:
+      required: true
+    attributes:
+      label: "👟 Reproduction steps"
+      description: "How do you trigger this bug? Please walk us through it step by step. Please attach module logs if available."
+      placeholder: "1. When I ..."
+  - type: textarea
+    id: expected-behavior
+    validations:
+      required: true
+    attributes:
+      label: "👍 Expected behavior"
+      description: "What did you think would happen?"
+      placeholder: "It should ..."
+  - type: textarea
+    id: actual-behavior
+    validations:
+      required: true
+    attributes:
+      label: "👎 Actual Behavior"
+      description: "What did actually happen? "
+      placeholder: "It actually ..."
+  - type: textarea
+    id: host-version
+    validations:
+      required: true
+    attributes:
+      label: "📱 Host version"
+      description: "What is your host app's version?"
+      placeholder: "e.g.: Douyin 38.8.0"
+  - type: textarea
+    id: solution
+    validations:
+      required: false
+    attributes:
+      label: "✅ Proposed Solution"
+      description: "Any thoughts as to potential solutions or ideas to go about finding one."
+      placeholder: "To fix this, I found ..."
+  - type: checkboxes
+    id: no-duplicate-issues
+    attributes:
+      label: "👀 Have you spent some time to check if this issue has been raised before?"
+      description: "Have you checked our older issues for a similar bug report?"
+      options:
+        - label: "I checked and didn't find any similar issue"
+          required: true
+  - type: checkboxes
+    id: acknowledge-logs-requirement
+    attributes:
+      label: "📄 Have you provided the module logs?"
+      description: "Without module logs, maintainers may struggle to locate the issue and might not process your report."
+      options:
+        - label: "I understand that missing module logs may prevent the bug from being fixed or addressed"
+          required: true
+  - type: checkboxes
+    id: using-latest-version
+    attributes:
+      label: "🔖 Are you using the latest version of the module?"
+      description: "Bugs in older versions may have already been fixed in newer releases. Please confirm."
+      options:
+        - label: "I confirm I am using the latest version of the module"
+          required: true

@@ -20,13 +20,6 @@ object VerifyDialogHooker : YukiBaseHooker() {
         get() = !ConfigManager.module.verboseDisabled.value
 
     override fun onHook() {
-        if (!VerifyDialog.shouldVerify()) {
-            if (verbose) {
-                YLog.debug("$TAG: no verification required, skipping verification check")
-            }
-            return
-        }
-
         packageInstance.mainActivity.selfClass?.resolveMethodOrNull(
             packageInstance.mainActivity.onResume()
         )?.hook {
@@ -35,7 +28,11 @@ object VerifyDialogHooker : YukiBaseHooker() {
                     YLog.error("$TAG: ${instance::class.qualifiedName} is not an Activity")
                     return@after
                 }
-                VerifyDialog.show(activity)
+                if (VerifyDialog.shouldVerify(activity)) {
+                    VerifyDialog.show(activity)
+                } else if (verbose) {
+                    YLog.debug("$TAG: no verification required")
+                }
 
                 removeSelf {
                     if (verbose) {

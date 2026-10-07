@@ -36,6 +36,7 @@
     <string name="pref_ui_keep_danmaku_visible_summary">通过原生清屏白名单保留弹幕；清爽模式开启时自动生效</string>
     <string name="recommended_feed_filter_main_switch_title">总开关</string>
     <string name="recommended_feed_filter_main_switch_summary">开启后可以使用推荐流过滤功能</string>
+    <string name="recommended_feed_filter_block_followed_author_title">隐藏已关注作者的内容</string>
     <string name="recommended_feed_filter_block_ad_title">✦ 屏蔽广告</string>
     <string name="recommended_feed_filter_block_ad_summary">尝试屏蔽推荐流中的广告（实验性功能）</string>
     <string name="recommended_feed_filter_block_ecom_aweme_title">✦ 屏蔽电商推广</string>
@@ -129,14 +130,27 @@
     <string name="playback_component_block_ai_co_creators_three">✦ AI合拍作者头像</string>
     <string name="playback_component_block_aigc_cocreate_status_title">✦ AI共创标签</string>
 
-    <string name="bottom_tab_block_dialog_title">隐藏底部导航项</string>
-    <string name="bottom_tab_main_switch_title">总开关</string>
+    <string name="bottom_tab_block_dialog_title">隐藏导航项</string>
+    <string name="bottom_tab_main_switch_title">底栏总开关</string>
     <string name="bottom_tab_main_switch_summary">开启后可以使用隐藏底部导航项功能</string>
     <string name="bottom_tab_hide_homepage_home">首页</string>
     <string name="bottom_tab_hide_homepage_mall">商城</string>
     <string name="bottom_tab_hide_homepage_publish">发布按钮</string>
     <string name="bottom_tab_hide_homepage_notification">消息</string>
     <string name="bottom_tab_hide_homepage_profile">我</string>
+    <string name="top_tab_main_switch_title">顶栏总开关</string>
+    <string name="top_tab_main_switch_summary">开启后可以使用隐藏顶栏导航项功能</string>
+    <string name="top_tab_hide_homepage_follow">关注</string>
+    <string name="top_tab_hide_homepage_familiar">朋友</string>
+    <string name="top_tab_hide_homepage_groupon">团购</string>
+    <string name="top_tab_hide_homepage_hot_container">推荐</string>
+    <string name="top_tab_hide_homepage_nearby">同城</string>
+    <string name="top_tab_hide_homepage_mediumvideo">精选</string>
+    <string name="top_tab_hide_homepage_pad_hot">热点</string>
+    <string name="top_tab_hide_homepage_hangout">经验</string>
+    <string name="top_tab_hide_homepage_tablive">直播</string>
+
+    <string name="home_tab_block_summary">隐藏首页顶栏或底栏的导航项</string>
 
     <string name="pref_category_backup">备份和还原</string>
     <string name="pref_backup_export_title">导出配置</string>
@@ -189,7 +203,7 @@
     <string name="pref_about_telegram_summary">点击加入 TG 频道</string>
     <string name="pref_about_build_time_title">构建时间</string>
     <string name="pref_about_back_then_title">作者当时🎵</string>
-    <string name="pref_about_back_then_summary">五星红旗迎风飘扬 胜利歌声多么响亮\n歌唱我们亲爱的祖国 从今走向繁荣富强🎵</string>
+    <string name="pref_about_back_then_summary">一叶轻船\n一双桨悠懒\n一绵江风微拂素罗衫\n渔火点点聚散\n欸乃声声浅淡\n天近晚\n炊烟袅飘沿斑🎵</string>
 
     <string name="success">成功</string>
     <string name="failed">失败</string>

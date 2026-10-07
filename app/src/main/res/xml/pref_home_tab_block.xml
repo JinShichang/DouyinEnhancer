@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_main_switch"
+        android:summary="@string/bottom_tab_main_switch_summary"
+        android:title="@string/bottom_tab_main_switch_title" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_home"
+        android:title="@string/bottom_tab_hide_homepage_home" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_mall"
+        android:title="@string/bottom_tab_hide_homepage_mall" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_publish"
+        android:title="@string/bottom_tab_hide_homepage_publish" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_notification"
+        android:title="@string/bottom_tab_hide_homepage_notification" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="bottom_tab_hide_homepage_profile"
+        android:title="@string/bottom_tab_hide_homepage_profile" />
+
+    <SwitchPreference
+        android:defaultValue="false"
+        android:key="top_tab_main_switch"
+        android:summary="@string/top_tab_main_switch_summary"
+        android:title="@string/top_tab_main_switch_title" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_hot_container"
+        android:title="@string/top_tab_hide_homepage_hot_container" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_follow"
+        android:title="@string/top_tab_hide_homepage_follow" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_familiar"
+        android:title="@string/top_tab_hide_homepage_familiar" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_groupon"
+        android:title="@string/top_tab_hide_homepage_groupon" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_tablive"
+        android:title="@string/top_tab_hide_homepage_tablive" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_pad_hot"
+        android:title="@string/top_tab_hide_homepage_pad_hot" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_nearby"
+        android:title="@string/top_tab_hide_homepage_nearby" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_hangout"
+        android:title="@string/top_tab_hide_homepage_hangout" />
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="top_tab_hide_homepage_mediumvideo"
+        android:title="@string/top_tab_hide_homepage_mediumvideo" />
+</PreferenceScreen>

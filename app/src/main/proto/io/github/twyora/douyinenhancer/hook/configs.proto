@@ -152,6 +152,7 @@ message Aweme {
   optional Method get_download_status = 16;
   optional Field aid = 17;
   optional Field status = 18;
+  optional Method get_follow_status = 19;
 }
 
 message AwemeStatus {
@@ -411,17 +412,19 @@ message AbsTask {
   optional Method get_target_file_paths = 2;
 }
 
-message TabNode {
+// begin IHomeTabDataSource implementers
+message HomeTabDataSourceServer {
   optional Class class = 1;
-  optional Field tab_id = 2;
-  optional Field children = 3;
+  optional Method get_showing_bottom_tab_ids = 2;
+  optional Method get_showing_top_tab_ids = 3;
 }
 
-message MPFBottomTabComponent {
+message HomeTabDataSourceDefault {
   optional Class class = 1;
-  optional Field tab_root = 2;
-  optional Method build_tab_views = 3;
+  optional Method get_showing_bottom_tab_ids = 2;
+  optional Method get_showing_top_tab_ids = 3;
 }
+// end IHomeTabDataSource implementers
 
 message HookInfo {
   uint64 last_update_time = 1;
@@ -476,11 +479,11 @@ message HookInfo {
   optional StoryServiceImpl story_service_impl = 61;
   optional AbsTask abs_task = 62;
   optional VideoPlayerStatus video_player_status = 63;
-  optional TabNode tab_node = 64;
-  optional MPFBottomTabComponent mpf_bottom_tab_component = 65;
-  optional NativeCleanMode native_clean_mode = 66;
-  optional CleanModeChrome clean_mode_chrome = 67;
+  optional HomeTabDataSourceServer home_tab_data_source_server = 66;
+  optional HomeTabDataSourceDefault home_tab_data_source_default = 67;
+  optional NativeCleanMode native_clean_mode = 68;
+  optional CleanModeChrome clean_mode_chrome = 69;
 
-  reserved 13, 18, 32, 35, 36, 38, 39, 40, 53, 54, 55;
-  reserved "clean_mode_presenter", "danmaku_view";
+  reserved 13, 18, 32, 35, 36, 38, 39, 40, 53, 54, 55, 64, 65;
+  reserved "clean_mode_presenter", "danmaku_view", "tab_node", "mpf_bottom_tab_component";
 }

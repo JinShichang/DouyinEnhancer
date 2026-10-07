@@ -1,0 +1,82 @@
+# Referenced from [devtron](https://github.com/devtron-labs/devtron/blob/6ab8595f053a331083d6f5e500527d930ddd8a0e/.github/ISSUE_TEMPLATE/bug.yaml)
+
+name: "🐛 Bug Report（中文）"
+description: "提交 bug 反馈以帮助项目持续改进"
+title: "Bug: "
+labels: [ "bug", "needs-triage" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你能够花费一些时间填写以下的 bug 反馈表单 🙏
+  - type: textarea
+    id: description
+    validations:
+      required: true
+    attributes:
+      label: "📜 描述"
+      description: "清晰简洁地描述这个 Bug。"
+  - type: textarea
+    id: steps-to-reproduce
+    validations:
+      required: true
+    attributes:
+      label: "👟 复现步骤"
+      description: "如何触发该Bug？请一步步描述操作过程。如果有模块日志，请一并附上。"
+      placeholder: "1. 当我......"
+  - type: textarea
+    id: expected-behavior
+    validations:
+      required: true
+    attributes:
+      label: "👍 预期行为"
+      description: "你期望的正常结果是什么？"
+      placeholder: "应当......"
+  - type: textarea
+    id: actual-behavior
+    validations:
+      required: true
+    attributes:
+      label: "👎 实际行为"
+      description: "实际发生了什么？"
+      placeholder: "实际......"
+  - type: textarea
+    id: host-version
+    validations:
+      required: true
+    attributes:
+      label: "📱 宿主版本"
+      description: "宿主版本是多少？"
+      placeholder: "例如：抖音 38.8.0"
+  - type: textarea
+    id: solution
+    validations:
+      required: false
+    attributes:
+      label: "✅ 建议的解决方案"
+      description: "是否有排查思路或者可行的解决方案？"
+      placeholder: "若要修复此问题，可以......"
+  - type: checkboxes
+    id: no-duplicate-issues
+    attributes:
+      label: "👀 你是否已抽空检查该问题是否曾经被提交过？"
+      description: "你是否查阅过本仓库历史 Issue，确认有无相同 Bug 反馈？"
+      options:
+        - label: "我已检查，未发现类似的 Issue"
+          required: true
+  - type: checkboxes
+    id: acknowledge-logs-requirement
+    attributes:
+      label: "📄 你是否提供了模块日志？"
+      description: "若未提供模块日志，维护者可能难以定位问题，甚至无法处理该反馈。"
+      options:
+        - label: "我已知悉，未提供模块日志可能导致问题无法修复或不被处理"
+          required: true
+  - type: checkboxes
+    id: using-latest-version
+    attributes:
+      label: "🔖 你是否使用模块最新版本？"
+      description: "旧版本的问题可能已在新版修复，请确认使用的是模块最新版本。"
+      options:
+        - label: "我确认正在使用模块最新版本"
+          required: true

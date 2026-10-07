@@ -12,6 +12,7 @@ import android.view.ContextThemeWrapper
 import com.highcapable.yukihookapi.hook.factory.injectModuleAppResources
 import com.highcapable.yukihookapi.hook.log.YLog
 import io.github.twyora.douyinenhancer.R
+import io.github.twyora.douyinenhancer.bridge.ModuleApp
 import io.github.twyora.douyinenhancer.config.ConfigManager
 import io.github.twyora.douyinenhancer.config.gate.ConfigStateMode
 import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
@@ -50,7 +51,7 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
         activity.fragmentManager.executePendingTransactions()
 
         setView(prefsFragment.view)
-        setTitle(R.string.playback_component_block_dialog_title)
+        setTitle(ModuleApp.instance.resources.getString(R.string.playback_component_block_dialog_title))
         setNegativeButton(android.R.string.cancel, null)
         setPositiveButton(android.R.string.ok, null)
         setOnDismissListener {
@@ -63,7 +64,7 @@ class PlaybackComponentBlockDialog(context: Context) : AlertDialog.Builder(Conte
 
         fun show(context: Context) {
             runCatching {
-                (context as? Activity)?.injectModuleAppResources()
+                context.injectModuleAppResources()
                 PlaybackComponentBlockDialog(context).show()
             }.onFailure {
                 YLog.error("$TAG: failed to show playback component block dialog", it)

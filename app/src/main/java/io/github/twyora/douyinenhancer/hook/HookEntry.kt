@@ -5,6 +5,7 @@ import com.highcapable.yukihookapi.annotation.xposed.InjectYukiHookWithXposed
 import com.highcapable.yukihookapi.hook.factory.encase
 import com.highcapable.yukihookapi.hook.log.YLog
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
+import io.github.twyora.douyinenhancer.bridge.ModuleApp
 import io.github.twyora.douyinenhancer.config.ConfigManager
 
 @InjectYukiHookWithXposed
@@ -28,6 +29,7 @@ object HookEntry : IYukiHookXposedInit {
                             return@onCreate
                         }
 
+                        ModuleApp.init(this@withProcess)
                         ConfigManager.init(this)
                         // load cached HookInfo and run hooks when app context is available
                         DouyinPackage.init(this.classLoader, this)

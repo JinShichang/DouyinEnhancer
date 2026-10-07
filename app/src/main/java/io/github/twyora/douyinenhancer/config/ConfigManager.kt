@@ -3,8 +3,8 @@ package io.github.twyora.douyinenhancer.config
 import android.content.Context
 import io.github.twyora.douyinenhancer.config.kvstorage.FastKVStorage
 import io.github.twyora.douyinenhancer.config.kvstorage.IKVStorage
-import io.github.twyora.douyinenhancer.config.provider.BottomTabBlockConfigProvider
 import io.github.twyora.douyinenhancer.config.provider.FeedConfigProvider
+import io.github.twyora.douyinenhancer.config.provider.HomeTabBlockConfigProvider
 import io.github.twyora.douyinenhancer.config.provider.MiscConfigProvider
 import io.github.twyora.douyinenhancer.config.provider.ModuleConfigProvider
 import io.github.twyora.douyinenhancer.config.provider.PlaybackComponentBlockConfigProvider
@@ -64,8 +64,8 @@ object ConfigManager {
         }
     }
 
-    val bottomTab by lazy {
-        BottomTabBlockConfigProvider(settingsStorage)
+    val homeTab by lazy {
+        HomeTabBlockConfigProvider(settingsStorage)
     }
 
     fun init(context: Context) {

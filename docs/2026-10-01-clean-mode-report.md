@@ -114,6 +114,16 @@ r6 验证：Kotlin 格式检查、8 项播放状态测试、5 项原生策略校
 
 2026-10-07：用户反馈 r6 测试“没什么问题”，确认原生命令策略方案在其当前设备上可用。该反馈不等同于全部宿主版本或上述每个边界均已验收。
 
+## r7：合并上游 0.15.1 后测试（2026-10-07）
+
+已合并上游 main 的 `1bab889`，包含 0.15.0 / 0.15.1 更新：首页顶部标签隐藏、底部标签隐藏改用原始导航数据、过滤已关注作者内容、推荐流过滤和播放组件开关修正、弹窗模块资源统一访问、非中文环境跳过版本确认，以及更新说明显示修复。按此前选择，fork 当前 GitHub 工作流保持不变。
+
+保留用户已测通过的 r6 原生弹幕策略和其他清爽模式代码；上游合并没有改变这几份核心 Hook。上游新 HomeTabDataSource 映射使用 HookInfo 编号 66/67，与本地清爽映射冲突，已保留上游编号，将 NativeCleanMode / CleanModeChrome 改为 68/69。移除的旧导航映射编号 64/65 与旧弹幕映射编号 53/54 保留为 reserved，不再复用。模块升级为 `0.15.1-cleanmode-r7` / 1502；缓存检查模块版本和安装更新时间，安装后重新生成映射。
+
+用户要求先测试本地合并结果，再更新原 PR；本轮不推送 PR 分支或发布 Release。设备验收重点是弹幕、暂停/恢复、关闭评论、直播预览，以及新首页顶部/底部导航隐藏开关与清爽模式的组合。
+
+r7 验证：Kotlin 格式检查、13 项 JVM 测试（0 失败/0 错误）、Release 构建和 lintVital 通过，构建进程退出码为 0。生成的 protobuf 字段确认 66/67 对应上游导航数据源、68/69 对应清爽模式；KSP 注册表包含 HomeTopTabHooker、HomeBottomTabHooker、DanmakuCleanModeHooker 与三个清爽模式 Hook。`git diff --check` 通过，daemon JVM criteria 已恢复。最终测试 APK 为外层 `artifacts/DouyinEnhancer_0.15.1-cleanmode-r7.apk`，versionCode 1502，v2 签名有效且证书与 r6 相同，可覆盖安装。SHA-256 为 `2c83323fe0e09d0f9293aeed1c407ba636c8d4c879df9bfd2614a57418cecd45`。安装后强制停止并重新打开抖音；合并后的实机结果待用户确认。
+
 ## 首轮构建与测试
 
 使用项目的 Java 21、Gradle 9.4.1 和现有依赖。普通环境可通过 Gradle Wrapper 构建：
