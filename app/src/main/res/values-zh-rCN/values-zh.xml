@@ -33,6 +33,10 @@
     <string name="pref_feed_block_resume_playback_title">阻止恢复播放</string>
     <string name="pref_feed_block_resume_playback_summary">返回前台时不主动恢复视频播放</string>
     <string name="pref_ui_keep_danmaku_visible_title">阻止弹幕隐藏</string>
+    <string name="pref_pause_quick_block_title">暂停时快速拉黑</string>
+    <string name="pref_pause_quick_block_summary">暂停视频时在作者头像上方显示拉黑按钮，点击打开抖音原生确认弹窗。修改后需重启抖音。</string>
+    <string name="pause_quick_block_button">拉黑</string>
+    <string name="pause_quick_block_unavailable">无法打开拉黑确认弹窗。</string>
     <string name="pref_ui_keep_danmaku_visible_summary">通过原生清屏白名单保留弹幕；清爽模式开启时自动生效</string>
     <string name="recommended_feed_filter_main_switch_title">总开关</string>
     <string name="recommended_feed_filter_main_switch_summary">开启后可以使用推荐流过滤功能</string>

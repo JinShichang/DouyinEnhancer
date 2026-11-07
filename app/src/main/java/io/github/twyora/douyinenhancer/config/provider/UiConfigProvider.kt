@@ -11,9 +11,11 @@ class UiConfigProvider(
 ) : AbsConfigProvider(kvConfig, ruleContextProvider) {
     val keepDanmakuVisible = configItem(KEEP_DANMAKU_VISIBLE, false)
     val cleanMode = configItem(CLEAN_MODE, false)
+    val pauseQuickBlock = configItem(PAUSE_QUICK_BLOCK, false)
 
     companion object {
         const val KEEP_DANMAKU_VISIBLE = "keep_danmaku_visible"
         const val CLEAN_MODE = "clean_mode_main_switch"
+        const val PAUSE_QUICK_BLOCK = "pause_quick_block"
     }
 }
